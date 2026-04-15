@@ -1,4 +1,4 @@
-# dns-response-time-monitor
+# dns-latency-probe
 
 `dns-latency-probe` is a production-minded CLI tool that measures DNS response latency by:
 
