@@ -84,6 +84,5 @@ Tests include:
 ## Future improvements
 
 - Optional CSV export for per-query latencies.
-- DNS-over-TCP query generation mode.
 - More advanced outlier and jitter analytics.
 - Optional Prometheus metrics exporter for long-running probes.
