@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: Black
+        run: black --check .
+
+      - name: Mypy
+        run: mypy
+
+      - name: Pytest
+        run: pytest --cov=src/dns_latency_probe --cov-report=xml
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml

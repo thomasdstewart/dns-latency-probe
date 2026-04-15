@@ -1,0 +1,4 @@
+# Example domains for local DNS latency probing
+example.com
+example.org
+iana.org
