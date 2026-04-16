@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -81,15 +80,8 @@ def write_markdown_report(
 
 
 def _render_markdown_lines(markdown_path: Path) -> list[str]:
-    command = ["pandoc", "--from", "markdown", "--to", "plain", str(markdown_path)]
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-    except FileNotFoundError as exc:
-        raise RuntimeError("Pandoc is required to render markdown for the PDF report.") from exc
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"Pandoc failed to render markdown: {exc.stderr.strip()}") from exc
-
-    return [line.rstrip() for line in result.stdout.splitlines() if line.strip()]
+    markdown_contents = markdown_path.read_text(encoding="utf-8")
+    return [line.rstrip() for line in markdown_contents.splitlines() if line.strip()]
 
 
 def write_pdf_report(
