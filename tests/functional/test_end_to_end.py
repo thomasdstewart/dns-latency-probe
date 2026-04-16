@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import socket
+import subprocess
 import threading
 import time
 from dataclasses import dataclass
@@ -118,6 +119,16 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr("dns_latency_probe.app.stop_capture", fake_stop_capture)
     monkeypatch.setattr("dns_latency_probe.app.run_query_loop", fake_run_query_loop)
 
+    def fake_pandoc_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args[0] if args else [],
+            returncode=0,
+            stdout="# DNS Latency Probe Report\n\n• Sender source IP(s): 127.0.0.1\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr("dns_latency_probe.reporting.subprocess.run", fake_pandoc_run)
+
     config = ProbeConfig(
         interface="lo",
         domains_file=domains_file,
@@ -152,3 +163,6 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
     assert "invocation_options" in summary
     assert "source_ips" in summary["invocation_options"]
     assert "127.0.0.1" in summary["invocation_options"]["source_ips"]
+
+    markdown_report = artifacts.markdown_path.read_text(encoding="utf-8")
+    assert "- Sender source IP(s): 127.0.0.1" in markdown_report

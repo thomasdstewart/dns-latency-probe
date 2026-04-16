@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -44,6 +45,7 @@ def write_markdown_report(
     histogram_file: str,
     timeseries_file: str,
     pdf_file: str,
+    sender_source_ip: str,
 ) -> None:
     lines = [
         "# DNS Latency Probe Report",
@@ -60,6 +62,7 @@ def write_markdown_report(
         f"- Unmatched queries: {stats.unmatched_queries}",
         f"- Late responses (>1s): {stats.late_responses}",
         f"- Duplicate response candidates dropped: {stats.duplicate_response_candidates}",
+        f"- Sender source IP(s): {sender_source_ip}",
         "",
         "## Latency Statistics (seconds)",
         f"- n: {stats.n}",
@@ -77,6 +80,18 @@ def write_markdown_report(
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _render_markdown_lines(markdown_path: Path) -> list[str]:
+    command = ["pandoc", "--from", "markdown", "--to", "plain", str(markdown_path)]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("Pandoc is required to render markdown for the PDF report.") from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"Pandoc failed to render markdown: {exc.stderr.strip()}") from exc
+
+    return [line.rstrip() for line in result.stdout.splitlines() if line.strip()]
+
+
 def write_pdf_report(
     *,
     markdown_path: Path,
@@ -85,13 +100,13 @@ def write_pdf_report(
     output_path: Path,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    markdown_lines = markdown_path.read_text(encoding="utf-8").splitlines()
+    rendered_lines = _render_markdown_lines(markdown_path)
 
     with PdfPages(output_path) as pdf:
-        for start in range(0, len(markdown_lines), 45):
+        for start in range(0, len(rendered_lines), 45):
             fig, ax = plt.subplots(figsize=(8.27, 11.69))
             ax.axis("off")
-            page_text = "\n".join(markdown_lines[start : start + 45])
+            page_text = "\n".join(rendered_lines[start : start + 45])
             ax.text(0.02, 0.98, page_text, va="top", ha="left", family="monospace", fontsize=10)
             pdf.savefig(fig, bbox_inches="tight")
             plt.close(fig)
