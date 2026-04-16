@@ -78,6 +78,7 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
         rate: float,
         stop_event: threading.Event,
         sent_queries: list[QueryRecord],
+        expected_queries: int | None = None,
     ) -> None:
         i = 0
         while not stop_event.is_set():

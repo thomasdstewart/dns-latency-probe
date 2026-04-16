@@ -45,6 +45,7 @@ def run_query_loop(
     rate: float,
     stop_event: threading.Event,
     sent_queries: list[QueryRecord],
+    expected_queries: int | None = None,
     sender: Sender = default_sender,
 ) -> None:
     limiter = RateLimiter(rate)
@@ -81,7 +82,16 @@ def run_query_loop(
         index += 1
         now = time.monotonic()
         if now >= next_report_at:
-            LOGGER.info("Query sender progress: sent %d queries", index)
+            if expected_queries and expected_queries > 0:
+                progress_pct = min((index / expected_queries) * 100, 100.0)
+                LOGGER.info(
+                    "Query sender progress: sent %d/%d queries (%.1f%%)",
+                    index,
+                    expected_queries,
+                    progress_pct,
+                )
+            else:
+                LOGGER.info("Query sender progress: sent %d queries", index)
             next_report_at = now + report_interval_seconds
         limiter.wait()
     LOGGER.info("Query worker stopped after sending %d queries", index)
