@@ -24,7 +24,7 @@
 ## Installation
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
 pip install -e .[dev]
@@ -43,7 +43,7 @@ In CI, tests avoid privileged sniffing by using synthetic packets and monkeypatc
 git clone <YOUR_FORK_OR_REPO_URL> dns-response-time-monitor
 cd dns-response-time-monitor
 
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
 pip install -e .
