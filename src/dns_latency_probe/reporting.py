@@ -3,12 +3,38 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
 from dns_latency_probe.analysis import LatencyStats
 
 
-def write_json_summary(stats: LatencyStats, output_path: Path) -> None:
+def write_json_summary(
+    stats: LatencyStats, invocation_options: dict[str, object], output_path: Path
+) -> None:
+    report = {
+        "invocation_options": invocation_options,
+        "summary": {
+            "total_queries_sent": stats.total_queries_sent,
+            "matched_responses": stats.matched_responses,
+            "unmatched_queries": stats.unmatched_queries,
+            "late_responses": stats.late_responses,
+            "duplicate_response_candidates": stats.duplicate_response_candidates,
+        },
+        "latency_statistics_seconds": {
+            "n": stats.n,
+            "min": stats.min_seconds,
+            "max": stats.max_seconds,
+            "mean": stats.mean_seconds,
+            "median": stats.median_seconds,
+            "stddev": stats.stdev_seconds,
+            "p95": stats.p95_seconds,
+            "p99": stats.p99_seconds,
+            "pct_over_1s": stats.pct_over_1s,
+        },
+    }
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(stats.to_dict(), indent=2), encoding="utf-8")
+    output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
 
 def write_markdown_report(
@@ -17,6 +43,7 @@ def write_markdown_report(
     pcap_file: str,
     histogram_file: str,
     timeseries_file: str,
+    pdf_file: str,
 ) -> None:
     lines = [
         "# DNS Latency Probe Report",
@@ -25,6 +52,7 @@ def write_markdown_report(
         f"- PCAP: `{pcap_file}`",
         f"- Histogram: `{histogram_file}`",
         f"- Time Series: `{timeseries_file}`",
+        f"- PDF: `{pdf_file}`",
         "",
         "## Summary",
         f"- Total queries sent: {stats.total_queries_sent}",
@@ -47,3 +75,35 @@ def write_markdown_report(
     ]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def write_pdf_report(
+    *,
+    markdown_path: Path,
+    histogram_path: Path,
+    timeseries_path: Path,
+    output_path: Path,
+) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    markdown_lines = markdown_path.read_text(encoding="utf-8").splitlines()
+
+    with PdfPages(output_path) as pdf:
+        for start in range(0, len(markdown_lines), 45):
+            fig, ax = plt.subplots(figsize=(8.27, 11.69))
+            ax.axis("off")
+            page_text = "\n".join(markdown_lines[start : start + 45])
+            ax.text(0.02, 0.98, page_text, va="top", ha="left", family="monospace", fontsize=10)
+            pdf.savefig(fig, bbox_inches="tight")
+            plt.close(fig)
+
+        for image_path, title in [
+            (histogram_path, "Latency Histogram"),
+            (timeseries_path, "Latency Time Series"),
+        ]:
+            image = plt.imread(image_path)
+            fig, ax = plt.subplots(figsize=(11, 8.5))
+            ax.imshow(image)
+            ax.set_title(title)
+            ax.axis("off")
+            pdf.savefig(fig, bbox_inches="tight")
+            plt.close(fig)

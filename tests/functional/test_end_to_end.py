@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import socket
 import threading
 import time
@@ -135,7 +136,19 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
     assert elapsed < 2.0
     assert artifacts.json_path.exists()
     assert artifacts.markdown_path.exists()
+    assert artifacts.pdf_path.exists()
     assert artifacts.pcap_path.exists()
     assert artifacts.histogram_path.exists()
     assert artifacts.timeseries_path.exists()
+    assert artifacts.json_path.name.endswith("_summary.json")
+    assert artifacts.markdown_path.name.endswith("_report.md")
+    assert artifacts.pdf_path.name.endswith("_report.pdf")
+    assert artifacts.pcap_path.name.endswith("_capture.pcap")
+    assert artifacts.histogram_path.name.endswith("_latency_histogram.png")
+    assert artifacts.timeseries_path.name.endswith("_latency_timeseries.png")
     assert artifacts.stats.matched_responses > 0
+
+    summary = json.loads(artifacts.json_path.read_text(encoding="utf-8"))
+    assert "invocation_options" in summary
+    assert "source_ips" in summary["invocation_options"]
+    assert "127.0.0.1" in summary["invocation_options"]["source_ips"]
