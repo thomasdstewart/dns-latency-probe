@@ -92,6 +92,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     )
 
     src_ips = sorted({query.src_ip for query in capture_queries})
+    sender_source_ip = ",".join(src_ips) if src_ips else "unknown"
     invocation_options: dict[str, object] = {
         "interface": config.interface,
         "domains_file": str(config.domains_file),
@@ -113,9 +114,14 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         histogram_file=histogram_path.name,
         timeseries_file=timeseries_path.name,
         pdf_file=pdf_path.name,
+        sender_source_ip=sender_source_ip,
     )
-    plot_latency_histogram(latencies, histogram_path, config.resolver, config.duration)
-    plot_latency_timeseries(matched, timeseries_path, config.resolver, config.duration)
+    plot_latency_histogram(
+        latencies, histogram_path, config.resolver, config.duration, sender_source_ip
+    )
+    plot_latency_timeseries(
+        matched, timeseries_path, config.resolver, config.duration, sender_source_ip
+    )
     write_pdf_report(
         markdown_path=markdown_path,
         histogram_path=histogram_path,

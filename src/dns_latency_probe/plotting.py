@@ -10,17 +10,33 @@ import matplotlib.pyplot as plt
 from dns_latency_probe.models import MatchedPair
 
 
-def _plot_title(base_title: str, resolver: str, duration_seconds: float) -> str:
-    return f"{base_title} (resolver={resolver}, duration={duration_seconds:g}s)"
+def _plot_title(
+    base_title: str, resolver: str, duration_seconds: float, sender_source_ip: str
+) -> str:
+    return (
+        f"{base_title} (resolver={resolver}, duration={duration_seconds:g}s, "
+        f"source_ip={sender_source_ip})"
+    )
 
 
 def plot_latency_histogram(
-    latencies: list[float], output_path: Path, resolver: str, duration_seconds: float
+    latencies: list[float],
+    output_path: Path,
+    resolver: str,
+    duration_seconds: float,
+    sender_source_ip: str,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(8, 4.5))
     plt.hist(latencies, bins=30, edgecolor="black")
-    plt.title(_plot_title("DNS Response Time Histogram", resolver, duration_seconds))
+    plt.title(
+        _plot_title(
+            "DNS Response Time Histogram",
+            resolver,
+            duration_seconds,
+            sender_source_ip,
+        )
+    )
     plt.xlabel("Latency (seconds)")
     plt.ylabel("Count")
     plt.tight_layout()
@@ -29,7 +45,11 @@ def plot_latency_histogram(
 
 
 def plot_latency_timeseries(
-    matched: list[MatchedPair], output_path: Path, resolver: str, duration_seconds: float
+    matched: list[MatchedPair],
+    output_path: Path,
+    resolver: str,
+    duration_seconds: float,
+    sender_source_ip: str,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if not matched:
@@ -42,9 +62,18 @@ def plot_latency_timeseries(
 
     plt.figure(figsize=(8, 4.5))
     plt.plot(xs, ys, marker="o", linestyle="none", markersize=3)
-    plt.title(_plot_title("DNS Response Time Over Time", resolver, duration_seconds))
+    plt.title(
+        _plot_title(
+            "DNS Response Time Over Time",
+            resolver,
+            duration_seconds,
+            sender_source_ip,
+        )
+    )
     plt.xlabel("Elapsed Time (seconds)")
     plt.ylabel("Latency (seconds)")
+    plt.yscale("symlog", linthresh=1e-3)
+    plt.ylim(0, 10)
     plt.tight_layout()
     plt.savefig(output_path)
     plt.close()
