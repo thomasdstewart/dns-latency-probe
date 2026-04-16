@@ -49,6 +49,8 @@ def run_query_loop(
 ) -> None:
     limiter = RateLimiter(rate)
     index = 0
+    report_interval_seconds = 5.0
+    next_report_at = time.monotonic() + report_interval_seconds
 
     while not stop_event.is_set():
         domain = domains[index % len(domains)]
@@ -77,5 +79,9 @@ def run_query_loop(
             )
         )
         index += 1
+        now = time.monotonic()
+        if now >= next_report_at:
+            LOGGER.info("Query sender progress: sent %d queries", index)
+            next_report_at = now + report_interval_seconds
         limiter.wait()
-    LOGGER.info("Query worker stopped")
+    LOGGER.info("Query worker stopped after sending %d queries", index)
