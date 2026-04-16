@@ -10,11 +10,17 @@ import matplotlib.pyplot as plt
 from dns_latency_probe.models import MatchedPair
 
 
-def plot_latency_histogram(latencies: list[float], output_path: Path) -> None:
+def _plot_title(base_title: str, resolver: str, duration_seconds: float) -> str:
+    return f"{base_title} (resolver={resolver}, duration={duration_seconds:g}s)"
+
+
+def plot_latency_histogram(
+    latencies: list[float], output_path: Path, resolver: str, duration_seconds: float
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(8, 4.5))
     plt.hist(latencies, bins=30, edgecolor="black")
-    plt.title("DNS Response Time Histogram")
+    plt.title(_plot_title("DNS Response Time Histogram", resolver, duration_seconds))
     plt.xlabel("Latency (seconds)")
     plt.ylabel("Count")
     plt.tight_layout()
@@ -22,7 +28,9 @@ def plot_latency_histogram(latencies: list[float], output_path: Path) -> None:
     plt.close()
 
 
-def plot_latency_timeseries(matched: list[MatchedPair], output_path: Path) -> None:
+def plot_latency_timeseries(
+    matched: list[MatchedPair], output_path: Path, resolver: str, duration_seconds: float
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if not matched:
         xs: list[float] = []
@@ -34,7 +42,7 @@ def plot_latency_timeseries(matched: list[MatchedPair], output_path: Path) -> No
 
     plt.figure(figsize=(8, 4.5))
     plt.plot(xs, ys, marker="o", linestyle="none", markersize=3)
-    plt.title("DNS Response Time Over Time")
+    plt.title(_plot_title("DNS Response Time Over Time", resolver, duration_seconds))
     plt.xlabel("Elapsed Time (seconds)")
     plt.ylabel("Latency (seconds)")
     plt.tight_layout()

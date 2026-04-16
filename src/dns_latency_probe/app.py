@@ -4,6 +4,7 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from dns_latency_probe.analysis import LatencyStats, compute_latency_stats
@@ -14,7 +15,7 @@ from dns_latency_probe.matching import match_dns_queries
 from dns_latency_probe.models import QueryRecord
 from dns_latency_probe.plotting import plot_latency_histogram, plot_latency_timeseries
 from dns_latency_probe.query_worker import run_query_loop
-from dns_latency_probe.reporting import write_json_summary, write_markdown_report
+from dns_latency_probe.reporting import write_json_summary, write_markdown_report, write_pdf_report
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,14 +25,20 @@ class RunArtifacts:
     pcap_path: Path
     json_path: Path
     markdown_path: Path
+    pdf_path: Path
     histogram_path: Path
     timeseries_path: Path
     stats: LatencyStats
 
 
+def _prefixed_filename(prefix: str, filename: str) -> str:
+    return f"{prefix}_{filename}"
+
+
 def run_probe(config: ProbeConfig) -> RunArtifacts:
     config.validate()
     config.output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp_prefix = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
     domains = load_domains(config.domains_file)
     sent_queries: list[QueryRecord] = []
@@ -58,7 +65,8 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     stop_event.set()
     worker.join(timeout=5)
 
-    packets = stop_capture(capture_session, config.pcap_path)
+    pcap_path = config.output_dir / _prefixed_filename(timestamp_prefix, config.pcap_file)
+    packets = stop_capture(capture_session, pcap_path)
     capture_queries, capture_responses = extract_dns_records(packets)
 
     matched, unmatched, late_count, duplicates = match_dns_queries(
@@ -73,26 +81,53 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         duplicate_response_candidates=duplicates,
     )
 
-    json_path = config.output_dir / "summary.json"
-    markdown_path = config.output_dir / "report.md"
-    histogram_path = config.output_dir / "latency_histogram.png"
-    timeseries_path = config.output_dir / "latency_timeseries.png"
+    json_path = config.output_dir / _prefixed_filename(timestamp_prefix, "summary.json")
+    markdown_path = config.output_dir / _prefixed_filename(timestamp_prefix, "report.md")
+    pdf_path = config.output_dir / _prefixed_filename(timestamp_prefix, "report.pdf")
+    histogram_path = config.output_dir / _prefixed_filename(
+        timestamp_prefix, "latency_histogram.png"
+    )
+    timeseries_path = config.output_dir / _prefixed_filename(
+        timestamp_prefix, "latency_timeseries.png"
+    )
 
-    write_json_summary(stats, json_path)
+    src_ips = sorted({query.src_ip for query in capture_queries})
+    invocation_options: dict[str, object] = {
+        "interface": config.interface,
+        "domains_file": str(config.domains_file),
+        "resolver": config.resolver,
+        "resolver_port": config.resolver_port,
+        "rate": config.rate,
+        "duration": config.duration,
+        "output_dir": str(config.output_dir),
+        "pcap_file": config.pcap_file,
+        "log_level": config.log_level,
+        "source_ips": src_ips,
+    }
+
+    write_json_summary(stats, invocation_options, json_path)
     write_markdown_report(
         stats,
         markdown_path,
-        pcap_file=config.pcap_file,
+        pcap_file=pcap_path.name,
         histogram_file=histogram_path.name,
         timeseries_file=timeseries_path.name,
+        pdf_file=pdf_path.name,
     )
-    plot_latency_histogram(latencies, histogram_path)
-    plot_latency_timeseries(matched, timeseries_path)
+    plot_latency_histogram(latencies, histogram_path, config.resolver, config.duration)
+    plot_latency_timeseries(matched, timeseries_path, config.resolver, config.duration)
+    write_pdf_report(
+        markdown_path=markdown_path,
+        histogram_path=histogram_path,
+        timeseries_path=timeseries_path,
+        output_path=pdf_path,
+    )
 
     return RunArtifacts(
-        pcap_path=config.pcap_path,
+        pcap_path=pcap_path,
         json_path=json_path,
         markdown_path=markdown_path,
+        pdf_path=pdf_path,
         histogram_path=histogram_path,
         timeseries_path=timeseries_path,
         stats=stats,

@@ -18,6 +18,7 @@
   - `.pcap` capture
   - JSON summary
   - Markdown report
+  - PDF report (Markdown content + both charts)
   - Histogram PNG
   - Time-series PNG
 
@@ -62,13 +63,14 @@ sudo "$(pwd)/.venv/bin/dns-latency-probe" \
 
 ## Output files
 
-Given `--output-dir output`, generated files include:
+Given `--output-dir output`, generated files include timestamp-prefixed artifacts (format `YYYY-MM-DD-HH-MM_*`), for example:
 
-- `output/capture.pcap`
-- `output/summary.json`
-- `output/report.md`
-- `output/latency_histogram.png`
-- `output/latency_timeseries.png`
+- `output/2026-04-16-14-30_capture.pcap`
+- `output/2026-04-16-14-30_summary.json`
+- `output/2026-04-16-14-30_report.md`
+- `output/2026-04-16-14-30_report.pdf`
+- `output/2026-04-16-14-30_latency_histogram.png`
+- `output/2026-04-16-14-30_latency_timeseries.png`
 
 ## Testing
 
