@@ -209,3 +209,7 @@ __marimo__/
 # Project outputs
 output/
 *.pcap
+
+# Example domains
+examples/top-1m.csv
+examples/top-1m.csv.zip
