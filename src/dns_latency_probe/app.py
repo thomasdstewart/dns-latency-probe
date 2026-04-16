@@ -52,6 +52,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
 
     capture_session = start_capture(config.interface)
     stop_event = threading.Event()
+    expected_queries = max(int(config.rate * config.duration), 1)
     worker = threading.Thread(
         target=run_query_loop,
         kwargs={
@@ -61,6 +62,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
             "rate": config.rate,
             "stop_event": stop_event,
             "sent_queries": sent_queries,
+            "expected_queries": expected_queries,
         },
         daemon=True,
         name="dns-query-worker",
