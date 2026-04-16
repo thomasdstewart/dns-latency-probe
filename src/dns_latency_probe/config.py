@@ -13,6 +13,7 @@ class ProbeConfig:
     rate: float = 10.0
     duration: float = 3600.0
     output_dir: Path = Path("output")
+    output_base_name: str = ""
     pcap_file: str = "capture.pcap"
     log_level: str = "INFO"
 
@@ -27,6 +28,10 @@ class ProbeConfig:
             raise ValueError("duration must be > 0")
         if self.resolver_port <= 0 or self.resolver_port > 65535:
             raise ValueError("resolver port must be in range 1..65535")
+        if self.output_base_name and not self.output_base_name.strip():
+            raise ValueError("output-base-name must not be blank when provided")
+        if "/" in self.output_base_name or "\\" in self.output_base_name:
+            raise ValueError("output-base-name must not contain path separators")
         if not self.pcap_file.endswith(".pcap"):
             raise ValueError("pcap-file must end with .pcap")
 

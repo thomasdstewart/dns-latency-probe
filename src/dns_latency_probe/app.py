@@ -31,6 +31,12 @@ class RunArtifacts:
     stats: LatencyStats
 
 
+def _build_filename_prefix(timestamp_prefix: str, output_base_name: str) -> str:
+    if output_base_name:
+        return f"{timestamp_prefix}_{output_base_name}"
+    return timestamp_prefix
+
+
 def _prefixed_filename(prefix: str, filename: str) -> str:
     return f"{prefix}_{filename}"
 
@@ -39,6 +45,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     config.validate()
     config.output_dir.mkdir(parents=True, exist_ok=True)
     timestamp_prefix = datetime.now().strftime("%Y-%m-%d-%H-%M")
+    filename_prefix = _build_filename_prefix(timestamp_prefix, config.output_base_name)
 
     domains = load_domains(config.domains_file)
     sent_queries: list[QueryRecord] = []
@@ -65,7 +72,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     stop_event.set()
     worker.join(timeout=5)
 
-    pcap_path = config.output_dir / _prefixed_filename(timestamp_prefix, config.pcap_file)
+    pcap_path = config.output_dir / _prefixed_filename(filename_prefix, config.pcap_file)
     packets = stop_capture(capture_session, pcap_path)
     capture_queries, capture_responses = extract_dns_records(packets)
 
@@ -81,14 +88,14 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         duplicate_response_candidates=duplicates,
     )
 
-    json_path = config.output_dir / _prefixed_filename(timestamp_prefix, "summary.json")
-    markdown_path = config.output_dir / _prefixed_filename(timestamp_prefix, "report.md")
-    pdf_path = config.output_dir / _prefixed_filename(timestamp_prefix, "report.pdf")
+    json_path = config.output_dir / _prefixed_filename(filename_prefix, "summary.json")
+    markdown_path = config.output_dir / _prefixed_filename(filename_prefix, "report.md")
+    pdf_path = config.output_dir / _prefixed_filename(filename_prefix, "report.pdf")
     histogram_path = config.output_dir / _prefixed_filename(
-        timestamp_prefix, "latency_histogram.png"
+        filename_prefix, "latency_histogram.png"
     )
     timeseries_path = config.output_dir / _prefixed_filename(
-        timestamp_prefix, "latency_timeseries.png"
+        filename_prefix, "latency_timeseries.png"
     )
 
     src_ips = sorted({query.src_ip for query in capture_queries})
@@ -101,6 +108,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         "rate": config.rate,
         "duration": config.duration,
         "output_dir": str(config.output_dir),
+        "output_base_name": config.output_base_name,
         "pcap_file": config.pcap_file,
         "log_level": config.log_level,
         "source_ips": src_ips,
