@@ -39,10 +39,20 @@ In CI, tests avoid privileged sniffing by using synthetic packets and monkeypatc
 ## Example usage
 
 ```bash
-dns-latency-probe \
-  --interface lo \
+# from outside the repo:
+git clone <YOUR_FORK_OR_REPO_URL> dns-response-time-monitor
+cd dns-response-time-monitor
+
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e .
+
+# run with sudo for packet capture/raw packet privileges
+sudo "$(pwd)/.venv/bin/dns-latency-probe" \
+  --interface eth0 \
   --domains-file examples/domains.txt \
-  --resolver 127.0.0.1 \
+  --resolver 8.8.8.8 \
   --rate 20 \
   --duration 60 \
   --output-dir output \
