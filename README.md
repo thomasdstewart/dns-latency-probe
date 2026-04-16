@@ -57,13 +57,16 @@ sudo "$(pwd)/.venv/bin/dns-latency-probe" \
   --rate 20 \
   --duration 60 \
   --output-dir output \
+  --output-base-name baseline-a \
   --pcap-file capture.pcap \
   --log-level INFO
 ```
 
 ## Output files
 
-Given `--output-dir output`, generated files include timestamp-prefixed artifacts (format `YYYY-MM-DD-HH-MM_*`), for example:
+Given `--output-dir output`, generated files include timestamp-prefixed artifacts (format `YYYY-MM-DD-HH-MM_*`), and you can optionally include `--output-base-name` so files become `YYYY-MM-DD-HH-MM_<base-name>_*` for easy run comparison.
+
+Without `--output-base-name`:
 
 - `output/2026-04-16-14-30_capture.pcap`
 - `output/2026-04-16-14-30_summary.json`
@@ -71,6 +74,12 @@ Given `--output-dir output`, generated files include timestamp-prefixed artifact
 - `output/2026-04-16-14-30_report.pdf`
 - `output/2026-04-16-14-30_latency_histogram.png`
 - `output/2026-04-16-14-30_latency_timeseries.png`
+
+With `--output-base-name baseline-a`:
+
+- `output/2026-04-16-14-30_baseline-a_capture.pcap`
+- `output/2026-04-16-14-30_baseline-a_summary.json`
+- `output/2026-04-16-14-30_baseline-a_report.md`
 
 ## Testing
 

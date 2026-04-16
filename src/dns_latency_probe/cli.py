@@ -25,6 +25,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--rate", default=10.0, type=float, help="Queries per second")
     parser.add_argument("--duration", default=3600.0, type=float, help="Run duration in seconds")
     parser.add_argument("--output-dir", default=Path("output"), type=Path, help="Output directory")
+    parser.add_argument(
+        "--output-base-name",
+        default="",
+        help="Optional base name inserted after the timestamp in generated artifact filenames",
+    )
     parser.add_argument("--pcap-file", default="capture.pcap", help="PCAP filename")
     parser.add_argument(
         "--log-level",
@@ -52,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         rate=args.rate,
         duration=args.duration,
         output_dir=args.output_dir,
+        output_base_name=args.output_base_name,
         pcap_file=args.pcap_file,
         log_level=args.log_level,
     )

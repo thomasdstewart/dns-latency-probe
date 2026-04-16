@@ -126,6 +126,7 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
         rate=20,
         duration=0.3,
         output_dir=tmp_path / "out",
+        output_base_name="baseline-a",
     )
 
     start = time.time()
@@ -140,18 +141,19 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
     assert artifacts.pcap_path.exists()
     assert artifacts.histogram_path.exists()
     assert artifacts.timeseries_path.exists()
-    assert artifacts.json_path.name.endswith("_summary.json")
-    assert artifacts.markdown_path.name.endswith("_report.md")
-    assert artifacts.pdf_path.name.endswith("_report.pdf")
-    assert artifacts.pcap_path.name.endswith("_capture.pcap")
-    assert artifacts.histogram_path.name.endswith("_latency_histogram.png")
-    assert artifacts.timeseries_path.name.endswith("_latency_timeseries.png")
+    assert artifacts.json_path.name.endswith("_baseline-a_summary.json")
+    assert artifacts.markdown_path.name.endswith("_baseline-a_report.md")
+    assert artifacts.pdf_path.name.endswith("_baseline-a_report.pdf")
+    assert artifacts.pcap_path.name.endswith("_baseline-a_capture.pcap")
+    assert artifacts.histogram_path.name.endswith("_baseline-a_latency_histogram.png")
+    assert artifacts.timeseries_path.name.endswith("_baseline-a_latency_timeseries.png")
     assert artifacts.stats.matched_responses > 0
 
     summary = json.loads(artifacts.json_path.read_text(encoding="utf-8"))
     assert "invocation_options" in summary
     assert "source_ips" in summary["invocation_options"]
     assert "127.0.0.1" in summary["invocation_options"]["source_ips"]
+    assert summary["invocation_options"]["output_base_name"] == "baseline-a"
 
     markdown_report = artifacts.markdown_path.read_text(encoding="utf-8")
     assert "- Sender source IP(s): 127.0.0.1" in markdown_report
