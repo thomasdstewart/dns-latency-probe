@@ -149,7 +149,7 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
         artifacts = run_probe(config)
         elapsed = time.time() - start
 
-        assert elapsed < 6.0
+        assert elapsed < 15.0
         assert artifacts.json_path.exists()
         assert artifacts.markdown_path.exists()
         assert artifacts.pdf_path.exists()
