@@ -21,6 +21,7 @@ LOGGER = logging.getLogger(__name__)
 class CaptureSession:
     sniffer: AsyncSniffer
     packets: list[Packet]
+    packets_lock: threading.Lock
     packet_count: list[int]
     reporter_stop_event: threading.Event
     reporter_thread: threading.Thread
@@ -32,18 +33,22 @@ def dns_bpf_filter() -> str:
 
 def start_capture(interface: str) -> CaptureSession:
     packets: list[Packet] = []
+    packets_lock = threading.Lock()
     packet_count = [0]
     ready = threading.Event()
     reporter_stop_event = threading.Event()
     report_interval_seconds = 5.0
 
     def handle_packet(packet: Packet) -> None:
-        packets.append(packet)
-        packet_count[0] += 1
+        with packets_lock:
+            packets.append(packet)
+            packet_count[0] += 1
 
     def report_capture_progress() -> None:
         while not reporter_stop_event.wait(report_interval_seconds):
-            LOGGER.info("Capture progress: received %d packets", packet_count[0])
+            with packets_lock:
+                current_count = packet_count[0]
+            LOGGER.info("Capture progress: received %d packets", current_count)
 
     sniffer = AsyncSniffer(iface=interface, filter=dns_bpf_filter(), prn=handle_packet, store=False)
     sniffer.start()
@@ -66,6 +71,7 @@ def start_capture(interface: str) -> CaptureSession:
     return CaptureSession(
         sniffer=sniffer,
         packets=packets,
+        packets_lock=packets_lock,
         packet_count=packet_count,
         reporter_stop_event=reporter_stop_event,
         reporter_thread=reporter_thread,
@@ -76,10 +82,13 @@ def stop_capture(session: CaptureSession, pcap_path: Path) -> list[Packet]:
     session.reporter_stop_event.set()
     session.reporter_thread.join(timeout=1)
     session.sniffer.stop(join=True)
+    with session.packets_lock:
+        packets = list(session.packets)
+        packet_count = session.packet_count[0]
     pcap_path.parent.mkdir(parents=True, exist_ok=True)
-    wrpcap(str(pcap_path), session.packets)
-    LOGGER.info("Saved %d captured packets to %s", session.packet_count[0], pcap_path)
-    return session.packets
+    wrpcap(str(pcap_path), packets)
+    LOGGER.info("Saved %d captured packets to %s", packet_count, pcap_path)
+    return packets
 
 
 def _qname_from_dns(packet: Packet) -> str:
