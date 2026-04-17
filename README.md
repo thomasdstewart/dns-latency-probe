@@ -64,7 +64,7 @@ sudo "$(pwd)/.venv/bin/dns-latency-probe" \
 
 ## Output files
 
-Given `--output-dir output`, generated files include timestamp-prefixed artifacts (format `YYYY-MM-DD-HH-MM_*`), and you can optionally include `--output-base-name` so files become `YYYY-MM-DD-HH-MM_<base-name>_*` for easy run comparison.
+Given `--output-dir output`, generated files include timestamp-prefixed artifacts (format `YYYY-MM-DD-HH-MM_*`), and you can optionally include `--output-base-name` so files become `YYYY-MM-DD-HH-MM_<base-name>_*` for easy run comparison. The base name is normalized to a conservative slug (`lowercase letters`, `numbers`, and `-`).
 
 Without `--output-base-name`:
 
