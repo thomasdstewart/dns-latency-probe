@@ -91,11 +91,25 @@ def stop_capture(session: CaptureSession, pcap_path: Path) -> list[Packet]:
     return packets
 
 
-def _qname_from_dns(packet: Packet) -> str:
-    qd = packet[DNS].qd
-    qname_raw = qd.qname if isinstance(qd, DNSQR) else qd[0].qname
+def _qname_from_question(question: DNSQR) -> str:
+    qname_raw = question.qname
     qname = str(qname_raw.decode("utf-8", errors="ignore").rstrip(".").lower())
     return qname
+
+
+def _first_dns_question(dns: DNS) -> DNSQR | None:
+    qd = dns.qd
+    if qd is None:
+        return None
+    if isinstance(qd, DNSQR):
+        return qd
+    try:
+        first = qd[0]
+    except (IndexError, TypeError):
+        return None
+    if isinstance(first, DNSQR):
+        return first
+    return None
 
 
 def extract_dns_records(packets: list[Packet]) -> tuple[list[QueryRecord], list[ResponseRecord]]:
@@ -106,7 +120,8 @@ def extract_dns_records(packets: list[Packet]) -> tuple[list[QueryRecord], list[
         if DNS not in packet or IP not in packet:
             continue
         dns = packet[DNS]
-        if dns.qdcount < 1:
+        question = _first_dns_question(dns)
+        if question is None:
             continue
 
         protocol: str
@@ -123,8 +138,8 @@ def extract_dns_records(packets: list[Packet]) -> tuple[list[QueryRecord], list[
         else:
             continue
 
-        qname = _qname_from_dns(packet)
-        qtype = int(dns.qd.qtype)
+        qname = _qname_from_question(question)
+        qtype = int(question.qtype)
         timestamp = float(getattr(packet, "time", 0.0))
 
         if dns.qr == 0:
