@@ -63,7 +63,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-q --cov=src/dns_latency_probe --cov-report=term-missing"
+addopts = "-q"
 testpaths = ["tests"]
 filterwarnings = [
   "error::pytest.PytestUnhandledThreadExceptionWarning",

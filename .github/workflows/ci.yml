@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev]
+          pip install -c constraints.txt -e .[dev]
 
       - name: Ruff
         run: ruff check .
@@ -36,9 +36,18 @@ jobs:
         run: mypy
 
       - name: Pytest
-        run: pytest --cov=src/dns_latency_probe --cov-report=xml
+        run: pytest
+
+      - name: Coverage (optional pytest-cov)
+        run: |
+          if python -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('pytest_cov') else 1)"; then
+            pytest --cov=src/dns_latency_probe --cov-report=xml
+          else
+            echo "pytest-cov is not installed; skipping coverage run."
+          fi
 
       - name: Upload coverage artifact
+        if: hashFiles('coverage.xml') != ''
         uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.python-version }}

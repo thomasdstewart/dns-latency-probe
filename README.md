@@ -28,8 +28,12 @@
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -e .[dev]
+pip install -c constraints.txt -e .[dev]
 ```
+
+
+For reproducible installs across local and CI environments, this repository ships a pinned `constraints.txt` file.
+Apply it to every install command with `-c constraints.txt`.
 
 ## Privilege considerations
 
@@ -47,7 +51,7 @@ cd dns-response-time-monitor
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -e .
+pip install -c constraints.txt -e .
 
 # run with sudo for packet capture/raw packet privileges
 sudo "$(pwd)/.venv/bin/dns-latency-probe" \
@@ -88,6 +92,8 @@ ruff check .
 black --check .
 mypy
 pytest
+# optional coverage when pytest-cov is installed
+pytest --cov=src/dns_latency_probe --cov-report=term-missing
 ```
 
 Tests include:

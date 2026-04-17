@@ -8,7 +8,7 @@ Thanks for contributing.
 python -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -e .[dev]
+pip install -c constraints.txt -e .[dev]
 pre-commit install
 ```
 
@@ -21,6 +21,8 @@ ruff check .
 black --check .
 mypy
 pytest
+# optional coverage when pytest-cov is installed
+pytest --cov=src/dns_latency_probe --cov-report=term-missing
 ```
 
 ## Style
