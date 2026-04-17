@@ -6,6 +6,7 @@ import pytest
 from scapy.layers.dns import DNS
 from scapy.packet import Packet
 
+from dns_latency_probe.models import QueryRecord
 from dns_latency_probe.query_worker import resolve_source_ip, run_query_loop
 
 
@@ -22,7 +23,7 @@ def test_resolve_source_ip_returns_none_for_unspecified_route(
 
 def test_run_query_loop_records_resolved_source_ip(monkeypatch: pytest.MonkeyPatch) -> None:
     stop_event = threading.Event()
-    sent_queries = []
+    sent_queries: list[QueryRecord] = []
 
     monkeypatch.setattr("dns_latency_probe.query_worker.resolve_source_ip", lambda _resolver: None)
     monkeypatch.setattr("dns_latency_probe.query_worker.random.randint", lambda _a, _b: 12345)
