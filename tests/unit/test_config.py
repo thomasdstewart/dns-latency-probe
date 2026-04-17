@@ -79,5 +79,30 @@ def test_config_validation_rejects_unresolvable_resolver_hostname(
 
     monkeypatch.setattr("dns_latency_probe.config.socket.getaddrinfo", fake_getaddrinfo)
     config = ProbeConfig(interface="lo", domains_file=domains_file, resolver="resolver.invalid")
-    with pytest.raises(ValueError, match="could not be resolved"):
+    with pytest.raises(ValueError, match="could not be resolved to an IPv4"):
+        config.validate()
+
+
+def test_config_validation_rejects_ipv6_resolver_literal(tmp_path: Path) -> None:
+    domains_file = tmp_path / "domains.txt"
+    domains_file.write_text("example.com\n", encoding="utf-8")
+
+    config = ProbeConfig(interface="lo", domains_file=domains_file, resolver="::1")
+    with pytest.raises(ValueError, match="IPv6 addresses are not supported"):
+        config.validate()
+
+
+def test_config_validation_requires_ipv4_lookup_for_hostname(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    domains_file = tmp_path / "domains.txt"
+    domains_file.write_text("example.com\n", encoding="utf-8")
+
+    def fake_getaddrinfo(*args: object, **kwargs: object) -> list[object]:
+        assert kwargs["family"] == socket.AF_INET
+        raise socket.gaierror("No IPv4 answer")
+
+    monkeypatch.setattr("dns_latency_probe.config.socket.getaddrinfo", fake_getaddrinfo)
+    config = ProbeConfig(interface="lo", domains_file=domains_file, resolver="ipv6-only.example")
+    with pytest.raises(ValueError, match="could not be resolved to an IPv4"):
         config.validate()

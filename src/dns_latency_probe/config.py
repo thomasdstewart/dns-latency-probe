@@ -45,18 +45,32 @@ def validate_resolver_target(resolver: str, resolver_port: int) -> None:
         raise ValueError("resolver must be a non-empty IP address or hostname")
 
     try:
-        ipaddress.ip_address(stripped_resolver)
-        return
+        parsed_ip = ipaddress.ip_address(stripped_resolver)
     except ValueError:
         pass
+    else:
+        if parsed_ip.version == 6:
+            raise ValueError("resolver IPv6 addresses are not supported yet; use an IPv4 resolver")
+        return
 
     if not _is_valid_hostname(stripped_resolver):
         raise ValueError("resolver must be a valid IPv4/IPv6 address or DNS hostname")
 
     try:
-        socket.getaddrinfo(stripped_resolver, resolver_port, type=socket.SOCK_DGRAM)
+        ipv4_infos = socket.getaddrinfo(
+            stripped_resolver,
+            resolver_port,
+            family=socket.AF_INET,
+            type=socket.SOCK_DGRAM,
+        )
     except socket.gaierror as exc:
-        raise ValueError(f"resolver hostname could not be resolved: {stripped_resolver}") from exc
+        raise ValueError(
+            f"resolver hostname could not be resolved to an IPv4 address: {stripped_resolver}"
+        ) from exc
+    if not ipv4_infos:
+        raise ValueError(
+            f"resolver hostname did not return any IPv4 addresses: {stripped_resolver}"
+        )
 
 
 @dataclass(slots=True, frozen=True)
