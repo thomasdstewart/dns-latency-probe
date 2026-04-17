@@ -72,13 +72,16 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     )
 
     packets = []
+    worker_started = False
     try:
         LOGGER.info("Starting DNS query worker")
         worker.start()
+        worker_started = True
         time.sleep(config.duration)
     finally:
         stop_event.set()
-        worker.join(timeout=5)
+        if worker_started:
+            worker.join(timeout=5)
         packets = stop_capture(capture_session, pcap_path)
 
     capture_queries, capture_responses = extract_dns_records(packets)
