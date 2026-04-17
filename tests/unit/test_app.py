@@ -186,6 +186,9 @@ def test_run_probe_uses_deadline_wait_not_time_sleep(
     ) -> tuple[list[object], list[object], int, int]:
         return [], [], 0, 0
 
+    def no_op(*_args: object, **_kwargs: object) -> None:
+        return None
+
     def fail_if_sleep_called(_seconds: float) -> None:
         raise AssertionError("time.sleep should not be used for probe duration timing")
 
@@ -194,19 +197,11 @@ def test_run_probe_uses_deadline_wait_not_time_sleep(
     monkeypatch.setattr("dns_latency_probe.app.run_query_loop", fake_run_query_loop)
     monkeypatch.setattr("dns_latency_probe.app.extract_dns_records", fake_extract_dns_records)
     monkeypatch.setattr("dns_latency_probe.app.match_dns_queries", fake_match_dns_queries)
-    monkeypatch.setattr(
-        "dns_latency_probe.app.write_json_summary", lambda *args, **kwargs: None
-    )
-    monkeypatch.setattr(
-        "dns_latency_probe.app.write_markdown_report", lambda *args, **kwargs: None
-    )
-    monkeypatch.setattr(
-        "dns_latency_probe.app.plot_latency_histogram", lambda *args, **kwargs: None
-    )
-    monkeypatch.setattr(
-        "dns_latency_probe.app.plot_latency_timeseries", lambda *args, **kwargs: None
-    )
-    monkeypatch.setattr("dns_latency_probe.app.write_pdf_report", lambda *args, **kwargs: None)
+    monkeypatch.setattr("dns_latency_probe.app.write_json_summary", no_op)
+    monkeypatch.setattr("dns_latency_probe.app.write_markdown_report", no_op)
+    monkeypatch.setattr("dns_latency_probe.app.plot_latency_histogram", no_op)
+    monkeypatch.setattr("dns_latency_probe.app.plot_latency_timeseries", no_op)
+    monkeypatch.setattr("dns_latency_probe.app.write_pdf_report", no_op)
     monkeypatch.setattr("dns_latency_probe.app.time.sleep", fail_if_sleep_called)
 
     config = ProbeConfig(
