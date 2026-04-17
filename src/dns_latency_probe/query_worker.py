@@ -6,6 +6,7 @@ import threading
 import time
 from collections.abc import Callable
 
+from scapy.config import conf
 from scapy.layers.dns import DNS, DNSQR
 from scapy.layers.inet import IP, UDP
 from scapy.packet import Packet
@@ -37,6 +38,18 @@ def build_query_packet(
     )
 
 
+def resolve_source_ip(resolver: str) -> str | None:
+    try:
+        route = conf.route.route(resolver)
+    except Exception:  # pragma: no cover - defensive fallback for platform-specific route failures
+        return None
+
+    source_ip = route[1]
+    if source_ip in ("0.0.0.0", ""):
+        return None
+    return source_ip
+
+
 def run_query_loop(
     *,
     domains: list[str],
@@ -50,6 +63,7 @@ def run_query_loop(
 ) -> None:
     limiter = RateLimiter(rate)
     index = 0
+    src_ip = resolve_source_ip(resolver)
     report_interval_seconds = 5.0
     next_report_at = time.monotonic() + report_interval_seconds
 
@@ -73,7 +87,7 @@ def run_query_loop(
                 qname=domain.rstrip(".").lower(),
                 qtype=1,
                 protocol="udp",
-                src_ip="0.0.0.0",
+                src_ip=src_ip,
                 src_port=src_port,
                 dst_ip=resolver,
                 dst_port=resolver_port,

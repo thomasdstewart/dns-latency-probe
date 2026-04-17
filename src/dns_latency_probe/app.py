@@ -126,7 +126,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         filename_prefix, "latency_timeseries.png"
     )
 
-    src_ips = sorted({query.src_ip for query in capture_queries})
+    src_ips = sorted({query.src_ip for query in capture_queries if query.src_ip is not None})
     sender_source_ip = ",".join(src_ips) if src_ips else "unknown"
     invocation_options: dict[str, object] = {
         "interface": config.interface,

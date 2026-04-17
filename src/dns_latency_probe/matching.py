@@ -5,7 +5,9 @@ from collections import defaultdict, deque
 from dns_latency_probe.models import MatchedPair, QueryRecord, ResponseRecord
 
 
-def _query_key(query: QueryRecord) -> tuple[int, str, int, str, str, int, str, int]:
+def _query_key(
+    query: QueryRecord,
+) -> tuple[int, str, int, str, str | None, int, str, int]:
     return (
         query.txid,
         query.qname,
@@ -20,7 +22,7 @@ def _query_key(query: QueryRecord) -> tuple[int, str, int, str, str, int, str, i
 
 def _response_to_query_key(
     response: ResponseRecord,
-) -> tuple[int, str, int, str, str, int, str, int]:
+) -> tuple[int, str, int, str, str | None, int, str, int]:
     return (
         response.txid,
         response.qname,
@@ -36,9 +38,10 @@ def _response_to_query_key(
 def match_dns_queries(
     queries: list[QueryRecord], responses: list[ResponseRecord], late_threshold_seconds: float = 1.0
 ) -> tuple[list[MatchedPair], list[QueryRecord], int, int]:
-    pending: dict[tuple[int, str, int, str, str, int, str, int], deque[QueryRecord]] = defaultdict(
-        deque
-    )
+    pending: dict[
+        tuple[int, str, int, str, str | None, int, str, int],
+        deque[QueryRecord],
+    ] = defaultdict(deque)
 
     for query in sorted(queries, key=lambda x: x.sent_at):
         pending[_query_key(query)].append(query)

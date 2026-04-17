@@ -10,7 +10,7 @@ class QueryRecord:
     qname: str
     qtype: int
     protocol: str
-    src_ip: str
+    src_ip: str | None
     src_port: int
     dst_ip: str
     dst_port: int
