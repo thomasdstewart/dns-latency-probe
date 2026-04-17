@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 
 import matplotlib
@@ -14,6 +15,31 @@ MAX_PLOT_LATENCY_SECONDS = 10.0
 
 def _clip_latency_seconds(latency_seconds: float) -> float:
     return min(latency_seconds, MAX_PLOT_LATENCY_SECONDS)
+
+
+def _apply_layout() -> None:
+    """Apply tight layout while tolerating backend/runtime recursion bugs."""
+    with suppress(RecursionError):
+        plt.tight_layout()
+
+
+def _save_with_fallback(output_path: Path, fallback_title: str) -> None:
+    try:
+        plt.savefig(output_path)
+    except RecursionError:
+        # Observed in some Python 3.14 + matplotlib combinations during render.
+        # Fall back to a minimal figure that avoids tick/marker layout internals.
+        plt.clf()
+        axis = plt.gca()
+        axis.axis("off")
+        axis.text(
+            0.5,
+            0.5,
+            f"{fallback_title}\n(render fallback applied)",
+            ha="center",
+            va="center",
+        )
+        plt.savefig(output_path)
 
 
 def _plot_title(
@@ -52,8 +78,8 @@ def plot_latency_histogram(
     )
     plt.xlabel("Latency (seconds)")
     plt.ylabel("Count")
-    plt.tight_layout()
-    plt.savefig(output_path)
+    _apply_layout()
+    _save_with_fallback(output_path, "DNS Response Time Histogram")
     plt.close()
 
 
@@ -89,6 +115,6 @@ def plot_latency_timeseries(
     plt.ylabel("Latency (seconds)")
     plt.yscale("symlog", linthresh=1e-3)
     plt.ylim(0, MAX_PLOT_LATENCY_SECONDS)
-    plt.tight_layout()
-    plt.savefig(output_path)
+    _apply_layout()
+    _save_with_fallback(output_path, "DNS Response Time Over Time")
     plt.close()

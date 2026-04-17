@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -10,6 +11,14 @@ from dns_latency_probe.analysis import LatencyStats
 
 _SECONDS_DECIMALS = 6
 _PERCENT_DECIMALS = 3
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    _PdfPagesFactory = Callable[[Path], PdfPages]
+    PDF_PAGES_FACTORY: _PdfPagesFactory = PdfPages
+else:
+    PDF_PAGES_FACTORY = PdfPages
 
 
 def _round_seconds(value: float | None) -> float | None:
@@ -126,13 +135,13 @@ def write_pdf_report(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     rendered_lines = _render_markdown_lines(markdown_path)
 
-    with PdfPages(output_path) as pdf:
+    with PDF_PAGES_FACTORY(output_path) as pdf:
         for start in range(0, len(rendered_lines), 45):
             fig, ax = plt.subplots(figsize=(8.27, 11.69))
             ax.axis("off")
             page_text = "\n".join(rendered_lines[start : start + 45])
             ax.text(0.02, 0.98, page_text, va="top", ha="left", family="monospace", fontsize=10)
-            pdf.savefig(fig, bbox_inches="tight")
+            pdf.savefig(fig)
             plt.close(fig)
 
         for image_path, title in [
@@ -144,5 +153,5 @@ def write_pdf_report(
             ax.imshow(image)
             ax.set_title(title)
             ax.axis("off")
-            pdf.savefig(fig, bbox_inches="tight")
+            pdf.savefig(fig)
             plt.close(fig)

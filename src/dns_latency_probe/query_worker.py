@@ -44,7 +44,7 @@ def resolve_source_ip(resolver: str) -> str | None:
     except Exception:  # pragma: no cover - defensive fallback for platform-specific route failures
         return None
 
-    source_ip = route[1]
+    source_ip: str = route[1]
     if source_ip in ("0.0.0.0", ""):
         return None
     return source_ip
