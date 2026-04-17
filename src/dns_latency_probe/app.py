@@ -44,7 +44,9 @@ def _prefixed_filename(prefix: str, filename: str) -> str:
 def run_probe(config: ProbeConfig) -> RunArtifacts:
     config.validate()
     config.output_dir.mkdir(parents=True, exist_ok=True)
-    timestamp_prefix = datetime.now().strftime("%Y-%m-%d-%H-%M")
+    run_started_at = datetime.now()
+    timestamp_prefix = run_started_at.strftime("%Y-%m-%d-%H-%M")
+    run_date = run_started_at.strftime("%Y-%m-%d")
     filename_prefix = _build_filename_prefix(timestamp_prefix, config.output_base_name)
 
     domains = load_domains(config.domains_file)
@@ -127,10 +129,20 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         sender_source_ip=sender_source_ip,
     )
     plot_latency_histogram(
-        latencies, histogram_path, config.resolver, config.duration, sender_source_ip
+        latencies,
+        histogram_path,
+        config.resolver,
+        config.duration,
+        sender_source_ip,
+        run_date,
     )
     plot_latency_timeseries(
-        matched, timeseries_path, config.resolver, config.duration, sender_source_ip
+        matched,
+        timeseries_path,
+        config.resolver,
+        config.duration,
+        sender_source_ip,
+        run_date,
     )
     write_pdf_report(
         markdown_path=markdown_path,

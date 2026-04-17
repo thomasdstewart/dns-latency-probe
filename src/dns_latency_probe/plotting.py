@@ -17,11 +17,15 @@ def _clip_latency_seconds(latency_seconds: float) -> float:
 
 
 def _plot_title(
-    base_title: str, resolver: str, duration_seconds: float, sender_source_ip: str
+    base_title: str,
+    resolver: str,
+    duration_seconds: float,
+    sender_source_ip: str,
+    run_date: str,
 ) -> str:
     return (
         f"{base_title} (resolver={resolver}, duration={duration_seconds:g}s, "
-        f"source_ip={sender_source_ip})"
+        f"source_ip={sender_source_ip}, run_date={run_date})"
     )
 
 
@@ -31,10 +35,11 @@ def plot_latency_histogram(
     resolver: str,
     duration_seconds: float,
     sender_source_ip: str,
+    run_date: str,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     clipped_latencies = [_clip_latency_seconds(latency) for latency in latencies]
-    plt.figure(figsize=(8, 4.5))
+    plt.figure(figsize=(16, 9))
     plt.hist(clipped_latencies, bins=30, edgecolor="black")
     plt.title(
         _plot_title(
@@ -42,6 +47,7 @@ def plot_latency_histogram(
             resolver,
             duration_seconds,
             sender_source_ip,
+            run_date,
         )
     )
     plt.xlabel("Latency (seconds)")
@@ -57,6 +63,7 @@ def plot_latency_timeseries(
     resolver: str,
     duration_seconds: float,
     sender_source_ip: str,
+    run_date: str,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if not matched:
@@ -67,7 +74,7 @@ def plot_latency_timeseries(
         xs = [pair.query.sent_at - t0 for pair in matched]
         ys = [_clip_latency_seconds(pair.latency_seconds) for pair in matched]
 
-    plt.figure(figsize=(8, 4.5))
+    plt.figure(figsize=(16, 9))
     plt.plot(xs, ys, marker="o", linestyle="none", markersize=3)
     plt.title(
         _plot_title(
@@ -75,6 +82,7 @@ def plot_latency_timeseries(
             resolver,
             duration_seconds,
             sender_source_ip,
+            run_date,
         )
     )
     plt.xlabel("Elapsed Time (seconds)")
