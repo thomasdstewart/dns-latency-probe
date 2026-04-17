@@ -51,16 +51,12 @@ def validate_resolver_target(resolver: str, resolver_port: int) -> None:
         pass
 
     if not _is_valid_hostname(stripped_resolver):
-        raise ValueError(
-            "resolver must be a valid IPv4/IPv6 address or DNS hostname"
-        )
+        raise ValueError("resolver must be a valid IPv4/IPv6 address or DNS hostname")
 
     try:
         socket.getaddrinfo(stripped_resolver, resolver_port, type=socket.SOCK_DGRAM)
     except socket.gaierror as exc:
-        raise ValueError(
-            f"resolver hostname could not be resolved: {stripped_resolver}"
-        ) from exc
+        raise ValueError(f"resolver hostname could not be resolved: {stripped_resolver}") from exc
 
 
 @dataclass(slots=True, frozen=True)
