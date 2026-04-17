@@ -65,3 +65,32 @@ def test_plotting_handles_tight_layout_recursion(
         )
 
     assert output_path.exists()
+
+
+def test_plotting_handles_savefig_recursion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original_savefig = plt.savefig
+    savefig_calls = 0
+
+    def flaky_savefig(*args: object, **kwargs: object) -> None:
+        nonlocal savefig_calls
+        savefig_calls += 1
+        if savefig_calls == 1:
+            raise RecursionError("simulated save recursion")
+        original_savefig(*args, **kwargs)
+
+    monkeypatch.setattr(plt, "savefig", flaky_savefig)
+
+    output_path = tmp_path / "fallback.png"
+    plot_latency_histogram(
+        latencies=[0.01, 0.02, 0.03],
+        output_path=output_path,
+        resolver="127.0.0.1",
+        duration_seconds=1.0,
+        sender_source_ip="127.0.0.1",
+        run_date="2026-04-17",
+    )
+
+    assert savefig_calls == 2
+    assert output_path.exists()
