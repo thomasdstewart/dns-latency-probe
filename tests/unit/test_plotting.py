@@ -65,4 +65,3 @@ def test_plotting_handles_tight_layout_recursion(
         )
 
     assert output_path.exists()
-
