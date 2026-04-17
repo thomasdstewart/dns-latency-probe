@@ -141,7 +141,7 @@ def write_pdf_report(
             ax.axis("off")
             page_text = "\n".join(rendered_lines[start : start + 45])
             ax.text(0.02, 0.98, page_text, va="top", ha="left", family="monospace", fontsize=10)
-            pdf.savefig(fig, bbox_inches="tight")
+            pdf.savefig(fig)
             plt.close(fig)
 
         for image_path, title in [
@@ -153,5 +153,5 @@ def write_pdf_report(
             ax.imshow(image)
             ax.set_title(title)
             ax.axis("off")
-            pdf.savefig(fig, bbox_inches="tight")
+            pdf.savefig(fig)
             plt.close(fig)
