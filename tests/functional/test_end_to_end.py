@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import socket
+import struct
 import threading
 import time
 from dataclasses import dataclass
@@ -33,8 +34,12 @@ class FakeDnsServer(threading.Thread):
     def run(self) -> None:
         while self._running:
             data, addr = self._sock.recvfrom(2048)
-            dns = DNS(data)
+            try:
+                dns = DNS(data)
+            except struct.error:
+                continue
             if dns.qr == 0 and dns.qd:
+                question = dns.qd[0]
                 reply = DNS(
                     id=dns.id,
                     qr=1,
@@ -42,7 +47,7 @@ class FakeDnsServer(threading.Thread):
                     rd=1,
                     ra=1,
                     qd=dns.qd,
-                    an=DNSRR(rrname=dns.qd.qname, type="A", ttl=60, rdata="127.0.0.1"),
+                    an=DNSRR(rrname=question.qname, type="A", ttl=60, rdata="127.0.0.1"),
                 )
                 self._sock.sendto(bytes(reply), addr)
 
