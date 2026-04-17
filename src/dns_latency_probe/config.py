@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-import re
-
 
 OUTPUT_BASE_NAME_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
@@ -49,7 +48,8 @@ class ProbeConfig:
             raise ValueError("resolver port must be in range 1..65535")
         if self.output_base_name and not OUTPUT_BASE_NAME_SLUG_RE.fullmatch(self.output_base_name):
             raise ValueError(
-                "output-base-name must normalize to a slug containing only lowercase letters, numbers, and hyphens"
+                "output-base-name must normalize to a slug containing only lowercase "
+                "letters, numbers, and hyphens"
             )
         if not self.pcap_file.endswith(".pcap"):
             raise ValueError("pcap-file must end with .pcap")
