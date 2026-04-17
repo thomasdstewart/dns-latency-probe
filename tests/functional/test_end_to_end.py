@@ -27,13 +27,21 @@ class FakeCaptureSession:
 class FakeDnsServer(threading.Thread):
     def __init__(self, host: str, port: int) -> None:
         super().__init__(daemon=True)
+        self._stop_event = threading.Event()
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sock.bind((host, port))
-        self._running = True
+        self._sock.settimeout(0.1)
 
     def run(self) -> None:
-        while self._running:
-            data, addr = self._sock.recvfrom(2048)
+        while not self._stop_event.is_set():
+            try:
+                data, addr = self._sock.recvfrom(2048)
+            except socket.timeout:
+                continue
+            except OSError:
+                if self._stop_event.is_set():
+                    return
+                raise
             try:
                 dns = DNS(data)
             except struct.error:
@@ -52,9 +60,10 @@ class FakeDnsServer(threading.Thread):
                 self._sock.sendto(bytes(reply), addr)
 
     def stop(self) -> None:
-        self._running = False
+        self._stop_event.set()
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as wake:
             wake.sendto(b"\x00", self._sock.getsockname())
+        self.join(timeout=1)
         self._sock.close()
 
 
@@ -136,30 +145,32 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
     )
 
     start = time.time()
-    artifacts = run_probe(config)
-    elapsed = time.time() - start
-    server.stop()
+    try:
+        artifacts = run_probe(config)
+        elapsed = time.time() - start
 
-    assert elapsed < 3.0
-    assert artifacts.json_path.exists()
-    assert artifacts.markdown_path.exists()
-    assert artifacts.pdf_path.exists()
-    assert artifacts.pcap_path.exists()
-    assert artifacts.histogram_path.exists()
-    assert artifacts.timeseries_path.exists()
-    assert artifacts.json_path.name.endswith("_baseline-a_summary.json")
-    assert artifacts.markdown_path.name.endswith("_baseline-a_report.md")
-    assert artifacts.pdf_path.name.endswith("_baseline-a_report.pdf")
-    assert artifacts.pcap_path.name.endswith("_baseline-a_capture.pcap")
-    assert artifacts.histogram_path.name.endswith("_baseline-a_latency_histogram.png")
-    assert artifacts.timeseries_path.name.endswith("_baseline-a_latency_timeseries.png")
-    assert artifacts.stats.matched_responses > 0
+        assert elapsed < 3.0
+        assert artifacts.json_path.exists()
+        assert artifacts.markdown_path.exists()
+        assert artifacts.pdf_path.exists()
+        assert artifacts.pcap_path.exists()
+        assert artifacts.histogram_path.exists()
+        assert artifacts.timeseries_path.exists()
+        assert artifacts.json_path.name.endswith("_baseline-a_summary.json")
+        assert artifacts.markdown_path.name.endswith("_baseline-a_report.md")
+        assert artifacts.pdf_path.name.endswith("_baseline-a_report.pdf")
+        assert artifacts.pcap_path.name.endswith("_baseline-a_capture.pcap")
+        assert artifacts.histogram_path.name.endswith("_baseline-a_latency_histogram.png")
+        assert artifacts.timeseries_path.name.endswith("_baseline-a_latency_timeseries.png")
+        assert artifacts.stats.matched_responses > 0
 
-    summary = json.loads(artifacts.json_path.read_text(encoding="utf-8"))
-    assert "invocation_options" in summary
-    assert "source_ips" in summary["invocation_options"]
-    assert "127.0.0.1" in summary["invocation_options"]["source_ips"]
-    assert summary["invocation_options"]["output_base_name"] == "baseline-a"
+        summary = json.loads(artifacts.json_path.read_text(encoding="utf-8"))
+        assert "invocation_options" in summary
+        assert "source_ips" in summary["invocation_options"]
+        assert "127.0.0.1" in summary["invocation_options"]["source_ips"]
+        assert summary["invocation_options"]["output_base_name"] == "baseline-a"
 
-    markdown_report = artifacts.markdown_path.read_text(encoding="utf-8")
-    assert "- Sender source IP(s): 127.0.0.1" in markdown_report
+        markdown_report = artifacts.markdown_path.read_text(encoding="utf-8")
+        assert "- Sender source IP(s): 127.0.0.1" in markdown_report
+    finally:
+        server.stop()

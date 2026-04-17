@@ -65,3 +65,6 @@ ignore_missing_imports = true
 minversion = "8.0"
 addopts = "-q --cov=src/dns_latency_probe --cov-report=term-missing"
 testpaths = ["tests"]
+filterwarnings = [
+  "error::pytest.PytestUnhandledThreadExceptionWarning",
+]
