@@ -183,8 +183,8 @@ def test_run_probe_uses_deadline_wait_not_time_sleep(
 
     def fake_match_dns_queries(
         _queries: list[object], _responses: list[object]
-    ) -> tuple[list[object], list[object], int, int]:
-        return [], [], 0, 0
+    ) -> tuple[list[object], list[object], int, int, int, int]:
+        return [], [], 0, 0, 0, 0
 
     def no_op(*_args: object, **_kwargs: object) -> None:
         return None
