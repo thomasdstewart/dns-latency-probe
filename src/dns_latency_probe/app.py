@@ -48,6 +48,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     timestamp_prefix = run_started_at.strftime("%Y-%m-%d-%H-%M")
     run_date = run_started_at.strftime("%Y-%m-%d")
     filename_prefix = _build_filename_prefix(timestamp_prefix, config.output_base_name)
+    pcap_path = config.output_dir / _prefixed_filename(filename_prefix, config.pcap_file)
 
     domains = load_domains(config.domains_file)
     sent_queries: list[QueryRecord] = []
@@ -70,14 +71,19 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         name="dns-query-worker",
     )
 
-    LOGGER.info("Starting DNS query worker")
-    worker.start()
-    time.sleep(config.duration)
-    stop_event.set()
-    worker.join(timeout=5)
+    packets = []
+    worker_started = False
+    try:
+        LOGGER.info("Starting DNS query worker")
+        worker.start()
+        worker_started = True
+        time.sleep(config.duration)
+    finally:
+        stop_event.set()
+        if worker_started:
+            worker.join(timeout=5)
+        packets = stop_capture(capture_session, pcap_path)
 
-    pcap_path = config.output_dir / _prefixed_filename(filename_prefix, config.pcap_file)
-    packets = stop_capture(capture_session, pcap_path)
     capture_queries, capture_responses = extract_dns_records(packets)
 
     matched, unmatched, late_count, duplicates = match_dns_queries(
