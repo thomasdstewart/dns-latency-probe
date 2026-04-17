@@ -8,6 +8,33 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from dns_latency_probe.analysis import LatencyStats
 
+_SECONDS_DECIMALS = 6
+_PERCENT_DECIMALS = 3
+
+
+def _round_seconds(value: float | None) -> float | None:
+    if value is None:
+        return None
+    return round(value, _SECONDS_DECIMALS)
+
+
+def _round_percent(value: float | None) -> float | None:
+    if value is None:
+        return None
+    return round(value, _PERCENT_DECIMALS)
+
+
+def _format_seconds(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:.{_SECONDS_DECIMALS}f} s"
+
+
+def _format_percent(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:.{_PERCENT_DECIMALS}f}%"
+
 
 def write_json_summary(
     stats: LatencyStats, invocation_options: dict[str, object], output_path: Path
@@ -24,15 +51,16 @@ def write_json_summary(
             "stale_responses": stats.stale_responses,
         },
         "latency_statistics_seconds": {
+            "unit": "seconds",
             "n": stats.n,
-            "min": stats.min_seconds,
-            "max": stats.max_seconds,
-            "mean": stats.mean_seconds,
-            "median": stats.median_seconds,
-            "stddev": stats.stdev_seconds,
-            "p95": stats.p95_seconds,
-            "p99": stats.p99_seconds,
-            "pct_over_1s": stats.pct_over_1s,
+            "min": _round_seconds(stats.min_seconds),
+            "max": _round_seconds(stats.max_seconds),
+            "mean": _round_seconds(stats.mean_seconds),
+            "median": _round_seconds(stats.median_seconds),
+            "stddev": _round_seconds(stats.stdev_seconds),
+            "p95": _round_seconds(stats.p95_seconds),
+            "p99": _round_seconds(stats.p99_seconds),
+            "pct_over_1s_percent": _round_percent(stats.pct_over_1s),
         },
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,16 +95,16 @@ def write_markdown_report(
         f"- Stale responses: {stats.stale_responses}",
         f"- Sender source IP(s): {sender_source_ip}",
         "",
-        "## Latency Statistics (seconds)",
+        "## Latency Statistics",
         f"- n: {stats.n}",
-        f"- min: {stats.min_seconds}",
-        f"- max: {stats.max_seconds}",
-        f"- mean: {stats.mean_seconds}",
-        f"- median: {stats.median_seconds}",
-        f"- stddev: {stats.stdev_seconds}",
-        f"- p95: {stats.p95_seconds}",
-        f"- p99: {stats.p99_seconds}",
-        f"- % > 1s: {stats.pct_over_1s}",
+        f"- min: {_format_seconds(stats.min_seconds)}",
+        f"- max: {_format_seconds(stats.max_seconds)}",
+        f"- mean: {_format_seconds(stats.mean_seconds)}",
+        f"- median: {_format_seconds(stats.median_seconds)}",
+        f"- stddev: {_format_seconds(stats.stdev_seconds)}",
+        f"- p95: {_format_seconds(stats.p95_seconds)}",
+        f"- p99: {_format_seconds(stats.p99_seconds)}",
+        f"- > 1 s: {_format_percent(stats.pct_over_1s)}",
         "",
     ]
     output_path.parent.mkdir(parents=True, exist_ok=True)
