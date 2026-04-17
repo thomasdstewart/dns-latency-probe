@@ -18,7 +18,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--domains-file", required=True, type=Path, help="UTF-8 text file with domains"
     )
     parser.add_argument(
-        "--resolver", default="127.0.0.1", help="DNS resolver IP (default: 127.0.0.1)"
+        "--resolver",
+        default="127.0.0.1",
+        help="DNS resolver IP address or hostname (default: 127.0.0.1)",
     )
     parser.add_argument(
         "--resolver-port", default=53, type=int, help="DNS resolver port (default: 53)"
