@@ -24,9 +24,7 @@ def test_extract_dns_records_uses_first_question_from_packet_list() -> None:
 
 def test_extract_dns_records_skips_packets_with_empty_question_list() -> None:
     packet = (
-        IP(src="127.0.0.1", dst="8.8.8.8")
-        / UDP(sport=55000, dport=53)
-        / DNS(id=12, qr=0, qd=[])
+        IP(src="127.0.0.1", dst="8.8.8.8") / UDP(sport=55000, dport=53) / DNS(id=12, qr=0, qd=[])
     )
     packet[DNS].qdcount = 1
 
