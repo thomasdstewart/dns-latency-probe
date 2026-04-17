@@ -8,6 +8,8 @@ def test_statistics_calculation() -> None:
         unmatched_queries=2,
         late_responses=1,
         duplicate_response_candidates=0,
+        out_of_order_responses=1,
+        stale_responses=2,
     )
 
     assert stats.n == 3

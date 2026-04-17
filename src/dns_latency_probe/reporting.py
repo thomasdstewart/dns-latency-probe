@@ -20,6 +20,8 @@ def write_json_summary(
             "unmatched_queries": stats.unmatched_queries,
             "late_responses": stats.late_responses,
             "duplicate_response_candidates": stats.duplicate_response_candidates,
+            "out_of_order_responses": stats.out_of_order_responses,
+            "stale_responses": stats.stale_responses,
         },
         "latency_statistics_seconds": {
             "n": stats.n,
@@ -61,6 +63,8 @@ def write_markdown_report(
         f"- Unmatched queries: {stats.unmatched_queries}",
         f"- Late responses (>1s): {stats.late_responses}",
         f"- Duplicate response candidates dropped: {stats.duplicate_response_candidates}",
+        f"- Out-of-order responses: {stats.out_of_order_responses}",
+        f"- Stale responses: {stats.stale_responses}",
         f"- Sender source IP(s): {sender_source_ip}",
         "",
         "## Latency Statistics (seconds)",

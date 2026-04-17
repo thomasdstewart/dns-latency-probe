@@ -12,6 +12,8 @@ class LatencyStats:
     unmatched_queries: int
     late_responses: int
     duplicate_response_candidates: int
+    out_of_order_responses: int
+    stale_responses: int
     n: int
     min_seconds: float | None
     max_seconds: float | None
@@ -41,6 +43,8 @@ def compute_latency_stats(
     unmatched_queries: int,
     late_responses: int,
     duplicate_response_candidates: int,
+    out_of_order_responses: int,
+    stale_responses: int,
 ) -> LatencyStats:
     if not latencies:
         return LatencyStats(
@@ -49,6 +53,8 @@ def compute_latency_stats(
             unmatched_queries=unmatched_queries,
             late_responses=late_responses,
             duplicate_response_candidates=duplicate_response_candidates,
+            out_of_order_responses=out_of_order_responses,
+            stale_responses=stale_responses,
             n=0,
             min_seconds=None,
             max_seconds=None,
@@ -68,6 +74,8 @@ def compute_latency_stats(
         unmatched_queries=unmatched_queries,
         late_responses=late_responses,
         duplicate_response_candidates=duplicate_response_candidates,
+        out_of_order_responses=out_of_order_responses,
+        stale_responses=stale_responses,
         n=len(latencies),
         min_seconds=min(ordered),
         max_seconds=max(ordered),

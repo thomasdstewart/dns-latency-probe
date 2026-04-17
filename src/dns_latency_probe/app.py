@@ -104,7 +104,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
 
     capture_queries, capture_responses = extract_dns_records(packets)
 
-    matched, unmatched, late_count, duplicates = match_dns_queries(
+    matched, unmatched, late_count, duplicates, out_of_order, stale = match_dns_queries(
         capture_queries, capture_responses
     )
     latencies = [entry.latency_seconds for entry in matched]
@@ -114,6 +114,8 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         unmatched_queries=len(unmatched),
         late_responses=late_count,
         duplicate_response_candidates=duplicates,
+        out_of_order_responses=out_of_order,
+        stale_responses=stale,
     )
 
     json_path = config.output_dir / _prefixed_filename(filename_prefix, "summary.json")
