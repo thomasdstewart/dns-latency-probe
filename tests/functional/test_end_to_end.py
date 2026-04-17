@@ -133,6 +133,42 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr("dns_latency_probe.app.stop_capture", fake_stop_capture)
     monkeypatch.setattr("dns_latency_probe.app.run_query_loop", fake_run_query_loop)
 
+    def fake_plot_latency_histogram(
+        _latencies: list[float],
+        output_path: Path,
+        _resolver: str,
+        _duration_seconds: float,
+        _sender_source_ip: str,
+        _run_date: str,
+    ) -> None:
+        output_path.write_bytes(b"fake-histogram")
+
+    def fake_plot_latency_timeseries(
+        _matched: list[object],
+        output_path: Path,
+        _resolver: str,
+        _duration_seconds: float,
+        _sender_source_ip: str,
+        _run_date: str,
+    ) -> None:
+        output_path.write_bytes(b"fake-timeseries")
+
+    def fake_write_pdf_report(
+        *,
+        markdown_path: Path,
+        histogram_path: Path,
+        timeseries_path: Path,
+        output_path: Path,
+    ) -> None:
+        _ = (markdown_path, histogram_path, timeseries_path)
+        output_path.write_bytes(b"%PDF-1.4\n%fake\n%%EOF\n")
+
+    monkeypatch.setattr("dns_latency_probe.app.plot_latency_histogram", fake_plot_latency_histogram)
+    monkeypatch.setattr(
+        "dns_latency_probe.app.plot_latency_timeseries", fake_plot_latency_timeseries
+    )
+    monkeypatch.setattr("dns_latency_probe.app.write_pdf_report", fake_write_pdf_report)
+
     config = ProbeConfig(
         interface="lo",
         domains_file=domains_file,
