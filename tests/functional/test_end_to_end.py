@@ -36,7 +36,7 @@ class FakeDnsServer(threading.Thread):
         while not self._stop_event.is_set():
             try:
                 data, addr = self._sock.recvfrom(2048)
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except OSError:
                 if self._stop_event.is_set():
