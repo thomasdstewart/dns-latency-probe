@@ -41,6 +41,20 @@ def _prefixed_filename(prefix: str, filename: str) -> str:
     return f"{prefix}_{filename}"
 
 
+def _wait_for_probe_duration(
+    *,
+    duration_seconds: float,
+    stop_event: threading.Event,
+    worker: threading.Thread,
+) -> None:
+    deadline = time.monotonic() + duration_seconds
+    while not stop_event.is_set() and worker.is_alive():
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        stop_event.wait(timeout=min(remaining, 0.1))
+
+
 def run_probe(config: ProbeConfig) -> RunArtifacts:
     config.validate()
     config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -77,7 +91,11 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         LOGGER.info("Starting DNS query worker")
         worker.start()
         worker_started = True
-        time.sleep(config.duration)
+        _wait_for_probe_duration(
+            duration_seconds=config.duration,
+            stop_event=stop_event,
+            worker=worker,
+        )
     finally:
         stop_event.set()
         if worker_started:
