@@ -6,6 +6,7 @@ from pathlib import Path
 
 from dns_latency_probe.app import run_probe
 from dns_latency_probe.config import ProbeConfig
+from dns_latency_probe.domains import DomainFileError
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -62,10 +63,15 @@ def main(argv: list[str] | None = None) -> int:
         log_level=args.log_level,
     )
 
+    logger = logging.getLogger(__name__)
+
     try:
         artifacts = run_probe(config)
-    except Exception as exc:
-        logging.getLogger(__name__).error("Probe failed: %s", exc)
+    except (DomainFileError, ValueError, OSError, RuntimeError) as exc:
+        logger.error("Probe failed: %s", exc)
+        return 1
+    except Exception:
+        logger.exception("Probe failed due to an unexpected error")
         return 1
 
     logging.getLogger(__name__).info(
