@@ -3,12 +3,11 @@ from __future__ import annotations
 from contextlib import suppress
 from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from dns_latency_probe.models import MatchedPair
+
+plt.switch_backend("Agg")
 
 def _apply_layout() -> None:
     """Apply tight layout while tolerating backend/runtime recursion bugs."""
