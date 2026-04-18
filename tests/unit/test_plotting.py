@@ -94,3 +94,74 @@ def test_plotting_handles_savefig_recursion(
 
     assert savefig_calls == 2
     assert output_path.exists()
+
+
+def test_plotting_preserves_high_latency_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    histogram_inputs: list[float] = []
+    timeseries_inputs: list[float] = []
+
+    def capture_hist(values: list[float], *args: object, **kwargs: object) -> None:
+        _ = (args, kwargs)
+        histogram_inputs.extend(values)
+
+    def capture_plot(*args: object, **kwargs: object) -> None:
+        _ = kwargs
+        if len(args) >= 2:
+            ys = args[1]
+            if isinstance(ys, list):
+                timeseries_inputs.extend(ys)
+
+    monkeypatch.setattr(plt, "hist", capture_hist)
+    monkeypatch.setattr(plt, "plot", capture_plot)
+
+    output_histogram = tmp_path / "high-latency-hist.png"
+    output_timeseries = tmp_path / "high-latency-series.png"
+
+    plot_latency_histogram(
+        latencies=[0.01, 12.5],
+        output_path=output_histogram,
+        resolver="127.0.0.1",
+        duration_seconds=1.0,
+        sender_source_ip="127.0.0.1",
+        run_date="2026-04-17",
+    )
+    plot_latency_timeseries(
+        matched=[
+            _matched_pair(),
+            MatchedPair(
+                query=QueryRecord(
+                    sent_at=1_700_000_001.0,
+                    txid=2,
+                    qname="example.org",
+                    qtype=1,
+                    protocol="udp",
+                    src_ip="127.0.0.1",
+                    src_port=53001,
+                    dst_ip="127.0.0.1",
+                    dst_port=53,
+                ),
+                response=ResponseRecord(
+                    seen_at=1_700_000_013.5,
+                    txid=2,
+                    qname="example.org",
+                    qtype=1,
+                    protocol="udp",
+                    src_ip="127.0.0.1",
+                    src_port=53,
+                    dst_ip="127.0.0.1",
+                    dst_port=53001,
+                ),
+                latency_seconds=12.5,
+            ),
+        ],
+        output_path=output_timeseries,
+        resolver="127.0.0.1",
+        duration_seconds=1.0,
+        sender_source_ip="127.0.0.1",
+        run_date="2026-04-17",
+    )
+
+    assert 12.5 in histogram_inputs
+    assert 12.5 in timeseries_inputs

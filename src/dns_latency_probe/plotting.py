@@ -3,18 +3,11 @@ from __future__ import annotations
 from contextlib import suppress
 from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from dns_latency_probe.models import MatchedPair
 
-MAX_PLOT_LATENCY_SECONDS = 10.0
-
-
-def _clip_latency_seconds(latency_seconds: float) -> float:
-    return min(latency_seconds, MAX_PLOT_LATENCY_SECONDS)
+plt.switch_backend("Agg")
 
 
 def _apply_layout() -> None:
@@ -64,9 +57,8 @@ def plot_latency_histogram(
     run_date: str,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    clipped_latencies = [_clip_latency_seconds(latency) for latency in latencies]
     plt.figure(figsize=(16, 9))
-    plt.hist(clipped_latencies, bins=30, edgecolor="black")
+    plt.hist(latencies, bins=30, edgecolor="black")
     plt.title(
         _plot_title(
             "DNS Response Time Histogram",
@@ -98,7 +90,7 @@ def plot_latency_timeseries(
     else:
         t0 = matched[0].query.sent_at
         xs = [pair.query.sent_at - t0 for pair in matched]
-        ys = [_clip_latency_seconds(pair.latency_seconds) for pair in matched]
+        ys = [pair.latency_seconds for pair in matched]
 
     plt.figure(figsize=(16, 9))
     plt.plot(xs, ys, marker="o", linestyle="none", markersize=3)
@@ -114,7 +106,6 @@ def plot_latency_timeseries(
     plt.xlabel("Elapsed Time (seconds)")
     plt.ylabel("Latency (seconds)")
     plt.yscale("symlog", linthresh=1e-3)
-    plt.ylim(0, MAX_PLOT_LATENCY_SECONDS)
     _apply_layout()
     _save_with_fallback(output_path, "DNS Response Time Over Time")
     plt.close()
