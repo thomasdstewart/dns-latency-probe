@@ -7,12 +7,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from scapy.packet import Packet
+
 from dns_latency_probe.analysis import LatencyStats, compute_latency_stats
 from dns_latency_probe.capture import extract_dns_records, start_capture, stop_capture
 from dns_latency_probe.config import ProbeConfig
 from dns_latency_probe.domains import load_domains
 from dns_latency_probe.matching import match_dns_queries
-from dns_latency_probe.models import QueryRecord
+from dns_latency_probe.models import MatchedPair, QueryRecord
 from dns_latency_probe.plotting import plot_latency_histogram, plot_latency_timeseries
 from dns_latency_probe.query_worker import run_query_loop
 from dns_latency_probe.reporting import write_json_summary, write_markdown_report, write_pdf_report
@@ -29,6 +31,16 @@ class RunArtifacts:
     histogram_path: Path
     timeseries_path: Path
     stats: LatencyStats
+
+
+@dataclass(slots=True)
+class ArtifactPaths:
+    pcap_path: Path
+    json_path: Path
+    markdown_path: Path
+    pdf_path: Path
+    histogram_path: Path
+    timeseries_path: Path
 
 
 def _build_filename_prefix(timestamp_prefix: str, output_base_name: str) -> str:
@@ -55,18 +67,26 @@ def _wait_for_probe_duration(
         stop_event.wait(timeout=min(remaining, 0.1))
 
 
-def run_probe(config: ProbeConfig) -> RunArtifacts:
-    config.validate()
-    config.output_dir.mkdir(parents=True, exist_ok=True)
-    run_started_at = datetime.now()
-    timestamp_prefix = run_started_at.strftime("%Y-%m-%d-%H-%M")
-    run_date = run_started_at.strftime("%Y-%m-%d")
-    filename_prefix = _build_filename_prefix(timestamp_prefix, config.output_base_name)
-    pcap_path = config.output_dir / _prefixed_filename(filename_prefix, config.pcap_file)
+def _build_artifact_paths(config: ProbeConfig, filename_prefix: str) -> ArtifactPaths:
+    return ArtifactPaths(
+        pcap_path=config.output_dir / _prefixed_filename(filename_prefix, config.pcap_file),
+        json_path=config.output_dir / _prefixed_filename(filename_prefix, "summary.json"),
+        markdown_path=config.output_dir / _prefixed_filename(filename_prefix, "report.md"),
+        pdf_path=config.output_dir / _prefixed_filename(filename_prefix, "report.pdf"),
+        histogram_path=config.output_dir
+        / _prefixed_filename(filename_prefix, "latency_histogram.png"),
+        timeseries_path=config.output_dir
+        / _prefixed_filename(filename_prefix, "latency_timeseries.png"),
+    )
 
-    domains = load_domains(config.domains_file)
+
+def _run_capture_phase(
+    *,
+    config: ProbeConfig,
+    domains: list[str],
+    pcap_path: Path,
+) -> tuple[list[Packet], list[QueryRecord]]:
     sent_queries: list[QueryRecord] = []
-
     capture_session = start_capture(config.interface)
     stop_event = threading.Event()
     expected_queries = max(int(config.rate * config.duration), 1)
@@ -102,32 +122,19 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
             worker.join(timeout=5)
         packets = stop_capture(capture_session, pcap_path)
 
-    capture_queries, capture_responses = extract_dns_records(packets)
+    return packets, sent_queries
 
-    matched, unmatched, late_count, duplicates, out_of_order, stale = match_dns_queries(
-        capture_queries, capture_responses
-    )
-    latencies = [entry.latency_seconds for entry in matched]
-    stats = compute_latency_stats(
-        latencies=latencies,
-        total_queries_sent=len(sent_queries),
-        unmatched_queries=len(unmatched),
-        late_responses=late_count,
-        duplicate_response_candidates=duplicates,
-        out_of_order_responses=out_of_order,
-        stale_responses=stale,
-    )
 
-    json_path = config.output_dir / _prefixed_filename(filename_prefix, "summary.json")
-    markdown_path = config.output_dir / _prefixed_filename(filename_prefix, "report.md")
-    pdf_path = config.output_dir / _prefixed_filename(filename_prefix, "report.pdf")
-    histogram_path = config.output_dir / _prefixed_filename(
-        filename_prefix, "latency_histogram.png"
-    )
-    timeseries_path = config.output_dir / _prefixed_filename(
-        filename_prefix, "latency_timeseries.png"
-    )
-
+def _emit_reports(
+    *,
+    config: ProbeConfig,
+    paths: ArtifactPaths,
+    stats: LatencyStats,
+    capture_queries: list[QueryRecord],
+    latencies: list[float],
+    matched: list[MatchedPair],
+    run_date: str,
+) -> None:
     src_ips = sorted({query.src_ip for query in capture_queries if query.src_ip is not None})
     sender_source_ip = ",".join(src_ips) if src_ips else "unknown"
     invocation_options: dict[str, object] = {
@@ -144,19 +151,19 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         "source_ips": src_ips,
     }
 
-    write_json_summary(stats, invocation_options, json_path)
+    write_json_summary(stats, invocation_options, paths.json_path)
     write_markdown_report(
         stats,
-        markdown_path,
-        pcap_file=pcap_path.name,
-        histogram_file=histogram_path.name,
-        timeseries_file=timeseries_path.name,
-        pdf_file=pdf_path.name,
+        paths.markdown_path,
+        pcap_file=paths.pcap_path.name,
+        histogram_file=paths.histogram_path.name,
+        timeseries_file=paths.timeseries_path.name,
+        pdf_file=paths.pdf_path.name,
         sender_source_ip=sender_source_ip,
     )
     plot_latency_histogram(
         latencies,
-        histogram_path,
+        paths.histogram_path,
         config.resolver,
         config.duration,
         sender_source_ip,
@@ -164,25 +171,68 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     )
     plot_latency_timeseries(
         matched,
-        timeseries_path,
+        paths.timeseries_path,
         config.resolver,
         config.duration,
         sender_source_ip,
         run_date,
     )
     write_pdf_report(
-        markdown_path=markdown_path,
-        histogram_path=histogram_path,
-        timeseries_path=timeseries_path,
-        output_path=pdf_path,
+        markdown_path=paths.markdown_path,
+        histogram_path=paths.histogram_path,
+        timeseries_path=paths.timeseries_path,
+        output_path=paths.pdf_path,
+    )
+
+
+def run_probe(config: ProbeConfig) -> RunArtifacts:
+    config.validate()
+    config.output_dir.mkdir(parents=True, exist_ok=True)
+    run_started_at = datetime.now()
+    timestamp_prefix = run_started_at.strftime("%Y-%m-%d-%H-%M")
+    run_date = run_started_at.strftime("%Y-%m-%d")
+    filename_prefix = _build_filename_prefix(timestamp_prefix, config.output_base_name)
+    paths = _build_artifact_paths(config, filename_prefix)
+
+    domains = load_domains(config.domains_file)
+    packets, sent_queries = _run_capture_phase(
+        config=config,
+        domains=domains,
+        pcap_path=paths.pcap_path,
+    )
+
+    capture_queries, capture_responses = extract_dns_records(packets)
+
+    matched, unmatched, late_count, duplicates, out_of_order, stale = match_dns_queries(
+        capture_queries, capture_responses
+    )
+    latencies = [entry.latency_seconds for entry in matched]
+    stats = compute_latency_stats(
+        latencies=latencies,
+        total_queries_sent=len(sent_queries),
+        unmatched_queries=len(unmatched),
+        late_responses=late_count,
+        duplicate_response_candidates=duplicates,
+        out_of_order_responses=out_of_order,
+        stale_responses=stale,
+    )
+
+    _emit_reports(
+        config=config,
+        paths=paths,
+        stats=stats,
+        capture_queries=capture_queries,
+        latencies=latencies,
+        matched=matched,
+        run_date=run_date,
     )
 
     return RunArtifacts(
-        pcap_path=pcap_path,
-        json_path=json_path,
-        markdown_path=markdown_path,
-        pdf_path=pdf_path,
-        histogram_path=histogram_path,
-        timeseries_path=timeseries_path,
+        pcap_path=paths.pcap_path,
+        json_path=paths.json_path,
+        markdown_path=paths.markdown_path,
+        pdf_path=paths.pdf_path,
+        histogram_path=paths.histogram_path,
+        timeseries_path=paths.timeseries_path,
         stats=stats,
     )
