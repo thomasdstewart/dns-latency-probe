@@ -9,6 +9,7 @@ from dns_latency_probe.models import MatchedPair
 
 plt.switch_backend("Agg")
 
+
 def _apply_layout() -> None:
     """Apply tight layout while tolerating backend/runtime recursion bugs."""
     with suppress(RecursionError):
