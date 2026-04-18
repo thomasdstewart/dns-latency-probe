@@ -68,10 +68,8 @@ def _build_artifact_paths(
         json_path=config.output_dir / f"{filename_prefix}_summary.json",
         markdown_path=config.output_dir / f"{filename_prefix}_report.md",
         pdf_path=config.output_dir / f"{filename_prefix}_report.pdf",
-        histogram_path=config.output_dir
-        / f"{filename_prefix}_latency_histogram.png",
-        timeseries_path=config.output_dir
-        / f"{filename_prefix}_latency_timeseries.png",
+        histogram_path=config.output_dir / f"{filename_prefix}_latency_histogram.png",
+        timeseries_path=config.output_dir / f"{filename_prefix}_latency_timeseries.png",
     )
 
 
