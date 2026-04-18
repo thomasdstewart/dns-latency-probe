@@ -7,12 +7,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from scapy.packet import Packet
+
 from dns_latency_probe.analysis import LatencyStats, compute_latency_stats
 from dns_latency_probe.capture import extract_dns_records, start_capture, stop_capture
 from dns_latency_probe.config import ProbeConfig
 from dns_latency_probe.domains import load_domains
 from dns_latency_probe.matching import match_dns_queries
-from dns_latency_probe.models import QueryRecord
+from dns_latency_probe.models import MatchedPair, QueryRecord
 from dns_latency_probe.plotting import plot_latency_histogram, plot_latency_timeseries
 from dns_latency_probe.query_worker import run_query_loop
 from dns_latency_probe.reporting import write_json_summary, write_markdown_report, write_pdf_report
@@ -83,7 +85,7 @@ def _run_capture_phase(
     config: ProbeConfig,
     domains: list[str],
     pcap_path: Path,
-) -> tuple[list[object], list[QueryRecord]]:
+) -> tuple[list[Packet], list[QueryRecord]]:
     sent_queries: list[QueryRecord] = []
     capture_session = start_capture(config.interface)
     stop_event = threading.Event()
@@ -128,9 +130,9 @@ def _emit_reports(
     config: ProbeConfig,
     paths: ArtifactPaths,
     stats: LatencyStats,
-    capture_queries: list[object],
+    capture_queries: list[QueryRecord],
     latencies: list[float],
-    matched: list[object],
+    matched: list[MatchedPair],
     run_date: str,
 ) -> None:
     src_ips = sorted({query.src_ip for query in capture_queries if query.src_ip is not None})
