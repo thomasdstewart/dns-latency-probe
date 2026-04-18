@@ -2,23 +2,14 @@
 
 ## Findings and recommendations
 
-- **Critical: race condition in packet capture buffer.** `start_capture()` appends to `packets` from a sniffer callback thread while `stop_capture()` can stop and immediately persist `session.packets` with no synchronization. Add a lock-protected queue/list or switch to Scapy storage semantics to avoid partial writes and data races.
-- **Critical: no `try/finally` around runtime lifecycle.** `run_probe()` starts capture and worker threads and then performs many downstream steps, but any exception in the middle can leave capture/thread resources in undefined state. Wrap run lifecycle in `try/finally` so stop/join/cleanup always execute.
-- **Major: duration timing is naïve and drifts.** The probe controls run time via `time.sleep(config.duration)` and only later asks thread shutdown. Use a monotonic deadline loop and cooperative stop checks to enforce duration accurately under load.
-- **Major: source IP recording is knowingly wrong in sent query records.** Query worker hardcodes `src_ip="0.0.0.0"`, so sent metadata is not trustworthy and cannot be reconciled with capture truth when troubleshooting. Resolve source IP (or make it optional/None) instead of fabricating values.
-- **Major: DNS parsing is brittle against modern Scapy DNS packet-list fields.** Code accesses `dns.qd.qtype` directly and helper logic assumes either `DNSQR` or indexable packet list; this is exactly where deprecation warnings are already appearing in tests. Update parsing to explicit first-element access (`qd[0]`) with robust type guards.
-- **Major: matching duplicate counter is semantically wrong.** In matcher loop, responses observed before query send time are counted as "duplicates", but that condition actually indicates clock/order anomalies or stale packets. Separate metrics (`out_of_order`, `stale`) from true duplicate responses.
-- **Major: exception handling in CLI is over-broad and hides diagnostics.** `main()` catches blanket `Exception` and prints one-line message. That destroys actionable traceback context for operator failures. Catch expected domain/config/runtime errors explicitly and log traceback for unexpected exceptions.
-- **Major: resolver input validation is superficial.** Config validates resolver port but never validates resolver host/IP format or reachability assumptions. Validate with `ipaddress` (or explicitly support hostnames) and fail early with clear errors.
-- **Medium: file naming safety is under-specified.** `output_base_name` rejects separators but allows arbitrary characters that are shell-hostile or awkward on filesystems. Add a conservative slug regex and normalize to safe token set.
-- **Medium: reporting emits raw float values with inconsistent precision.** Markdown/JSON dump direct Python float repr values, making diffs noisy and reports harder to read. Apply stable formatting (e.g., 3-6 decimals) and include units consistently.
-- **Medium: plotting hardcodes y-axis max of 10s.** Timeseries forcibly clips via `plt.ylim(0, 10)`, hiding exactly the pathological latencies operators care about. Derive bounds from data percentiles with headroom and annotate clipped points if needed.
-- **Medium: tests acknowledge thread crash warning but do not fail.** Functional test emits `PytestUnhandledThreadExceptionWarning` from fake DNS server shutdown path, yet suite passes. Treat thread exceptions as test failures and fix shutdown handshake.
-- **Medium: dependency and packaging posture is optimistic.** Project pins Python >=3.12 and heavy runtime deps but does not provide lockfile/constraints or reproducible env guidance; test command also assumes `pytest-cov` present via global `addopts`. Add a constraints file and make CI/test commands resilient without optional plugins.
+- **Medium: plotting still hard-clips latency at 10s with no visibility of clipped points.** You replaced linear scale with symlog, but `MAX_PLOT_LATENCY_SECONDS = 10.0` still truncates every outlier in both plots. That means severe latency spikes are silently flattened right when the chart should be loudest. Keep full values or explicitly annotate how many points were clipped and at what threshold.
+- **Medium: `run_probe()` is still an oversized orchestrator that does everything.** Lifecycle, matching, stats, artifact naming, output path construction, report writing, and plotting all live in one function. This makes the “happy path” hard to reason about and painful to test in isolation. Split it into focused helpers (`_run_capture_phase`, `_build_artifact_paths`, `_emit_reports`) so failures are easier to localize and unit test.
+- **Medium: duplicate filename-prefix helpers are needless indirection.** `_build_filename_prefix()` plus `_prefixed_filename()` creates extra hops for trivial string formatting. Collapse to one utility that returns all artifact names, or inline where used. Right now this is boilerplate noise.
+- **Low: resolver validation does blocking DNS lookups during config validation.** `validate_resolver_target()` calls `socket.getaddrinfo()` synchronously. That can hang CLI startup under bad resolver/network conditions before any structured runtime logging begins. Consider optional “strict resolution” mode or a short timeout strategy so validation failures are fast and predictable.
+- **Low: reporting and plotting APIs are argument-heavy and ripe for a context object.** Several calls repeat resolver/duration/source IP/date and artifact filenames as loose positional/keyword arguments. Introduce a small immutable report context dataclass to simplify signatures and reduce call-site churn when adding fields.
 
 ## Priority order to fix
 
-1. Lifecycle safety (`try/finally`, shutdown ordering, synchronization).
-2. DNS parsing correctness + matching metric semantics.
-3. Observability quality (truthful source metadata, richer CLI errors).
-4. Report/plot ergonomics and test hygiene.
+1. Stop silently hiding latency outliers in plots.
+2. Break up `run_probe()` into smaller, testable units.
+3. Simplify filename/report plumbing and validation ergonomics.
