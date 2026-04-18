@@ -43,16 +43,6 @@ class ArtifactPaths:
     timeseries_path: Path
 
 
-def _build_filename_prefix(timestamp_prefix: str, output_base_name: str) -> str:
-    if output_base_name:
-        return f"{timestamp_prefix}_{output_base_name}"
-    return timestamp_prefix
-
-
-def _prefixed_filename(prefix: str, filename: str) -> str:
-    return f"{prefix}_{filename}"
-
-
 def _wait_for_probe_duration(
     *,
     duration_seconds: float,
@@ -67,16 +57,19 @@ def _wait_for_probe_duration(
         stop_event.wait(timeout=min(remaining, 0.1))
 
 
-def _build_artifact_paths(config: ProbeConfig, filename_prefix: str) -> ArtifactPaths:
+def _build_artifact_paths(
+    config: ProbeConfig, *, timestamp_prefix: str, output_base_name: str
+) -> ArtifactPaths:
+    filename_prefix = (
+        f"{timestamp_prefix}_{output_base_name}" if output_base_name else timestamp_prefix
+    )
     return ArtifactPaths(
-        pcap_path=config.output_dir / _prefixed_filename(filename_prefix, config.pcap_file),
-        json_path=config.output_dir / _prefixed_filename(filename_prefix, "summary.json"),
-        markdown_path=config.output_dir / _prefixed_filename(filename_prefix, "report.md"),
-        pdf_path=config.output_dir / _prefixed_filename(filename_prefix, "report.pdf"),
-        histogram_path=config.output_dir
-        / _prefixed_filename(filename_prefix, "latency_histogram.png"),
-        timeseries_path=config.output_dir
-        / _prefixed_filename(filename_prefix, "latency_timeseries.png"),
+        pcap_path=config.output_dir / f"{filename_prefix}_{config.pcap_file}",
+        json_path=config.output_dir / f"{filename_prefix}_summary.json",
+        markdown_path=config.output_dir / f"{filename_prefix}_report.md",
+        pdf_path=config.output_dir / f"{filename_prefix}_report.pdf",
+        histogram_path=config.output_dir / f"{filename_prefix}_latency_histogram.png",
+        timeseries_path=config.output_dir / f"{filename_prefix}_latency_timeseries.png",
     )
 
 
@@ -191,8 +184,11 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     run_started_at = datetime.now()
     timestamp_prefix = run_started_at.strftime("%Y-%m-%d-%H-%M")
     run_date = run_started_at.strftime("%Y-%m-%d")
-    filename_prefix = _build_filename_prefix(timestamp_prefix, config.output_base_name)
-    paths = _build_artifact_paths(config, filename_prefix)
+    paths = _build_artifact_paths(
+        config,
+        timestamp_prefix=timestamp_prefix,
+        output_base_name=config.output_base_name,
+    )
 
     domains = load_domains(config.domains_file)
     packets, sent_queries = _run_capture_phase(
