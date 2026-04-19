@@ -78,16 +78,19 @@ def start_capture(interface: str) -> CaptureSession:
     )
 
 
-def stop_capture(session: CaptureSession, pcap_path: Path) -> list[Packet]:
+def stop_capture(session: CaptureSession, pcap_path: Path | None) -> list[Packet]:
     session.reporter_stop_event.set()
     session.reporter_thread.join(timeout=1)
     session.sniffer.stop(join=True)
     with session.packets_lock:
         packets = list(session.packets)
         packet_count = session.packet_count[0]
-    pcap_path.parent.mkdir(parents=True, exist_ok=True)
-    wrpcap(str(pcap_path), packets)
-    LOGGER.info("Saved %d captured packets to %s", packet_count, pcap_path)
+    if pcap_path is not None:
+        pcap_path.parent.mkdir(parents=True, exist_ok=True)
+        wrpcap(str(pcap_path), packets)
+        LOGGER.info("Saved %d captured packets to %s", packet_count, pcap_path)
+    else:
+        LOGGER.info("Captured %d packets (pcap writing disabled)", packet_count)
     return packets
 
 

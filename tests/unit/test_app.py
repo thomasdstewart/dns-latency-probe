@@ -28,10 +28,12 @@ def test_run_probe_stops_worker_and_capture_on_downstream_error(
 
     def fake_stop_capture(
         session: FakeCaptureSession,
-        pcap_path: Path,
+        pcap_path: Path | None,
     ) -> list[object]:
         nonlocal stop_capture_called
+        del session
         stop_capture_called = True
+        assert pcap_path is not None
         assert pcap_path.name.endswith(".pcap")
         return []
 
@@ -105,9 +107,11 @@ def test_run_probe_stops_capture_when_worker_start_fails(
         assert interface == "lo"
         return FakeCaptureSession()
 
-    def fake_stop_capture(session: FakeCaptureSession, pcap_path: Path) -> list[object]:
+    def fake_stop_capture(session: FakeCaptureSession, pcap_path: Path | None) -> list[object]:
         nonlocal stop_capture_called
+        del session
         stop_capture_called = True
+        assert pcap_path is not None
         assert pcap_path.name.endswith(".pcap")
         return []
 
@@ -160,8 +164,9 @@ def test_run_probe_uses_deadline_wait_not_time_sleep(
         assert interface == "lo"
         return FakeCaptureSession()
 
-    def fake_stop_capture(session: FakeCaptureSession, pcap_path: Path) -> list[object]:
+    def fake_stop_capture(session: FakeCaptureSession, pcap_path: Path | None) -> list[object]:
         del session
+        assert pcap_path is not None
         assert pcap_path.name.endswith(".pcap")
         return []
 
@@ -212,3 +217,88 @@ def test_run_probe_uses_deadline_wait_not_time_sleep(
     )
 
     run_probe(config)
+
+
+def test_run_probe_prometheus_mode_disables_report_outputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    domains_file = tmp_path / "domains.txt"
+    domains_file.write_text("example.com\n", encoding="utf-8")
+
+    class FakeCaptureSession:
+        pass
+
+    stop_capture_pcap_path: Path | None = tmp_path / "will-be-overwritten"
+    report_emit_attempted = False
+    prom_emit_called = False
+
+    def fake_start_capture(interface: str) -> FakeCaptureSession:
+        assert interface == "lo"
+        return FakeCaptureSession()
+
+    def fake_stop_capture(session: FakeCaptureSession, pcap_path: Path | None) -> list[object]:
+        nonlocal stop_capture_pcap_path
+        del session
+        stop_capture_pcap_path = pcap_path
+        return []
+
+    def fake_run_query_loop(
+        *,
+        domains: list[str],
+        resolver: str,
+        resolver_port: int,
+        rate: float,
+        stop_event: threading.Event,
+        sent_queries: list[object],
+        expected_queries: int | None = None,
+    ) -> None:
+        del domains, resolver, resolver_port, rate, sent_queries, expected_queries
+        stop_event.wait(timeout=1)
+
+    def fake_extract_dns_records(_packets: list[object]) -> tuple[list[object], list[object]]:
+        return [], []
+
+    def fake_match_dns_queries(
+        _queries: list[object], _responses: list[object]
+    ) -> tuple[list[object], list[object], int, int, int, int]:
+        return [], [], 0, 0, 0, 0
+
+    def fail_report_emit(*_args: object, **_kwargs: object) -> None:
+        nonlocal report_emit_attempted
+        report_emit_attempted = True
+
+    def fake_write_prometheus_textfile(**_kwargs: object) -> None:
+        nonlocal prom_emit_called
+        prom_emit_called = True
+
+    monkeypatch.setattr("dns_latency_probe.app.start_capture", fake_start_capture)
+    monkeypatch.setattr("dns_latency_probe.app.stop_capture", fake_stop_capture)
+    monkeypatch.setattr("dns_latency_probe.app.run_query_loop", fake_run_query_loop)
+    monkeypatch.setattr("dns_latency_probe.app.extract_dns_records", fake_extract_dns_records)
+    monkeypatch.setattr("dns_latency_probe.app.match_dns_queries", fake_match_dns_queries)
+    monkeypatch.setattr("dns_latency_probe.app.write_json_summary", fail_report_emit)
+    monkeypatch.setattr("dns_latency_probe.app.write_markdown_report", fail_report_emit)
+    monkeypatch.setattr("dns_latency_probe.app.plot_latency_histogram", fail_report_emit)
+    monkeypatch.setattr("dns_latency_probe.app.plot_latency_timeseries", fail_report_emit)
+    monkeypatch.setattr("dns_latency_probe.app.write_pdf_report", fail_report_emit)
+    monkeypatch.setattr(
+        "dns_latency_probe.app.write_prometheus_textfile",
+        fake_write_prometheus_textfile,
+    )
+
+    config = ProbeConfig(
+        interface="lo",
+        domains_file=domains_file,
+        duration=0.01,
+        resolver="8.8.8.8",
+        output_format="prometheus",
+        output_dir=tmp_path / "out",
+        prometheus_dir=tmp_path / "metrics",
+    )
+
+    artifacts = run_probe(config)
+
+    assert stop_capture_pcap_path is None
+    assert prom_emit_called
+    assert not report_emit_attempted
+    assert artifacts.prometheus_path.name.endswith("_8-8-8-8.prom")

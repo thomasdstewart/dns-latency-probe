@@ -11,11 +11,12 @@ from scapy.packet import Packet
 
 from dns_latency_probe.analysis import LatencyStats, compute_latency_stats
 from dns_latency_probe.capture import extract_dns_records, start_capture, stop_capture
-from dns_latency_probe.config import ProbeConfig
+from dns_latency_probe.config import ProbeConfig, normalize_output_base_name
 from dns_latency_probe.domains import load_domains
 from dns_latency_probe.matching import match_dns_queries
 from dns_latency_probe.models import MatchedPair, QueryRecord
 from dns_latency_probe.plotting import plot_latency_histogram, plot_latency_timeseries
+from dns_latency_probe.prometheus import write_prometheus_textfile
 from dns_latency_probe.query_worker import run_query_loop
 from dns_latency_probe.reporting import write_json_summary, write_markdown_report, write_pdf_report
 
@@ -30,6 +31,7 @@ class RunArtifacts:
     pdf_path: Path
     histogram_path: Path
     timeseries_path: Path
+    prometheus_path: Path
     stats: LatencyStats
 
 
@@ -41,6 +43,7 @@ class ArtifactPaths:
     pdf_path: Path
     histogram_path: Path
     timeseries_path: Path
+    prometheus_path: Path
 
 
 def _wait_for_probe_duration(
@@ -60,9 +63,11 @@ def _wait_for_probe_duration(
 def _build_artifact_paths(
     config: ProbeConfig, *, timestamp_prefix: str, output_base_name: str
 ) -> ArtifactPaths:
-    filename_prefix = (
-        f"{timestamp_prefix}_{output_base_name}" if output_base_name else timestamp_prefix
-    )
+    resolver_slug = normalize_output_base_name(config.resolver) or "resolver"
+    prefix_parts = [timestamp_prefix, resolver_slug]
+    if output_base_name:
+        prefix_parts.append(output_base_name)
+    filename_prefix = "_".join(prefix_parts)
     return ArtifactPaths(
         pcap_path=config.output_dir / f"{filename_prefix}_{config.pcap_file}",
         json_path=config.output_dir / f"{filename_prefix}_summary.json",
@@ -70,6 +75,7 @@ def _build_artifact_paths(
         pdf_path=config.output_dir / f"{filename_prefix}_report.pdf",
         histogram_path=config.output_dir / f"{filename_prefix}_latency_histogram.png",
         timeseries_path=config.output_dir / f"{filename_prefix}_latency_timeseries.png",
+        prometheus_path=config.prometheus_dir / f"{filename_prefix}.prom",
     )
 
 
@@ -77,7 +83,7 @@ def _run_capture_phase(
     *,
     config: ProbeConfig,
     domains: list[str],
-    pcap_path: Path,
+    pcap_path: Path | None,
 ) -> tuple[list[Packet], list[QueryRecord]]:
     sent_queries: list[QueryRecord] = []
     capture_session = start_capture(config.interface)
@@ -113,7 +119,7 @@ def _run_capture_phase(
         stop_event.set()
         if worker_started:
             worker.join(timeout=5)
-        packets = stop_capture(capture_session, pcap_path)
+        packets = stop_capture(capture_session, pcap_path=pcap_path)
 
     return packets, sent_queries
 
@@ -178,6 +184,23 @@ def _emit_reports(
     )
 
 
+def _emit_prometheus_metrics(
+    *,
+    config: ProbeConfig,
+    paths: ArtifactPaths,
+    stats: LatencyStats,
+    run_started_at: datetime,
+) -> None:
+    write_prometheus_textfile(
+        output_path=paths.prometheus_path,
+        stats=stats,
+        resolver=config.resolver,
+        resolver_port=config.resolver_port,
+        output_base_name=config.output_base_name,
+        run_started_unix=int(run_started_at.timestamp()),
+    )
+
+
 def run_probe(config: ProbeConfig) -> RunArtifacts:
     config.validate()
     config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -194,7 +217,7 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     packets, sent_queries = _run_capture_phase(
         config=config,
         domains=domains,
-        pcap_path=paths.pcap_path,
+        pcap_path=paths.pcap_path if config.output_format == "reports" else None,
     )
 
     capture_queries, capture_responses = extract_dns_records(packets)
@@ -213,15 +236,23 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         stale_responses=stale,
     )
 
-    _emit_reports(
-        config=config,
-        paths=paths,
-        stats=stats,
-        capture_queries=capture_queries,
-        latencies=latencies,
-        matched=matched,
-        run_date=run_date,
-    )
+    if config.output_format == "reports":
+        _emit_reports(
+            config=config,
+            paths=paths,
+            stats=stats,
+            capture_queries=capture_queries,
+            latencies=latencies,
+            matched=matched,
+            run_date=run_date,
+        )
+    else:
+        _emit_prometheus_metrics(
+            config=config,
+            paths=paths,
+            stats=stats,
+            run_started_at=run_started_at,
+        )
 
     return RunArtifacts(
         pcap_path=paths.pcap_path,
@@ -230,5 +261,6 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         pdf_path=paths.pdf_path,
         histogram_path=paths.histogram_path,
         timeseries_path=paths.timeseries_path,
+        prometheus_path=paths.prometheus_path,
         stats=stats,
     )

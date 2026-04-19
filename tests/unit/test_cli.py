@@ -10,6 +10,8 @@ def test_cli_parser_defaults() -> None:
     assert args.resolver == "127.0.0.1"
     assert args.duration == 3600.0
     assert args.output_base_name == ""
+    assert args.output_format == "reports"
+    assert args.prometheus_dir == Path("metrics")
 
 
 def test_cli_main_handles_runtime_error(tmp_path: Path) -> None:

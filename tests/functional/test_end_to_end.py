@@ -77,7 +77,8 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
         assert interface == "lo"
         return FakeCaptureSession(capture_packets)
 
-    def fake_stop_capture(session: FakeCaptureSession, pcap_path: Path) -> list[Packet]:
+    def fake_stop_capture(session: FakeCaptureSession, pcap_path: Path | None) -> list[Packet]:
+        assert pcap_path is not None
         wrpcap(str(pcap_path), session.packets)
         return session.packets
 
@@ -192,6 +193,7 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
         assert artifacts.pcap_path.exists()
         assert artifacts.histogram_path.exists()
         assert artifacts.timeseries_path.exists()
+        assert "_127-0-0-1_" in artifacts.json_path.name
         assert artifacts.json_path.name.endswith("_baseline-a_summary.json")
         assert artifacts.markdown_path.name.endswith("_baseline-a_report.md")
         assert artifacts.pdf_path.name.endswith("_baseline-a_report.pdf")

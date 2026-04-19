@@ -35,6 +35,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--pcap-file", default="capture.pcap", help="PCAP filename")
     parser.add_argument(
+        "--output-format",
+        default="reports",
+        choices=["reports", "prometheus"],
+        help="Output mode: full report artifacts or Prometheus textfile metrics",
+    )
+    parser.add_argument(
+        "--prometheus-dir",
+        default=Path("metrics"),
+        type=Path,
+        help="Directory for Prometheus textfile collector .prom artifacts",
+    )
+    parser.add_argument(
         "--log-level",
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
@@ -62,6 +74,8 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=args.output_dir,
         output_base_name=args.output_base_name,
         pcap_file=args.pcap_file,
+        output_format=args.output_format,
+        prometheus_dir=args.prometheus_dir,
         log_level=args.log_level,
     )
 
@@ -76,9 +90,15 @@ def main(argv: list[str] | None = None) -> int:
         logger.exception("Probe failed due to an unexpected error")
         return 1
 
-    logging.getLogger(__name__).info(
-        "Probe completed. Report=%s JSON=%s", artifacts.markdown_path, artifacts.json_path
-    )
+    if config.output_format == "prometheus":
+        logging.getLogger(__name__).info(
+            "Probe completed. Prometheus=%s",
+            artifacts.prometheus_path,
+        )
+    else:
+        logging.getLogger(__name__).info(
+            "Probe completed. Report=%s JSON=%s", artifacts.markdown_path, artifacts.json_path
+        )
     return 0
 
 
