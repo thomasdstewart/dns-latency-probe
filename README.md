@@ -62,28 +62,46 @@ sudo "$(pwd)/.venv/bin/dns-latency-probe" \
   --duration 60 \
   --output-dir output \
   --output-base-name baseline-a \
+  --output-format reports \
   --pcap-file capture.pcap \
   --log-level INFO
 ```
 
 ## Output files
 
-Given `--output-dir output`, generated files include timestamp-prefixed artifacts (format `YYYY-MM-DD-HH-MM_*`), and you can optionally include `--output-base-name` so files become `YYYY-MM-DD-HH-MM_<base-name>_*` for easy run comparison. The base name is normalized to a conservative slug (`lowercase letters`, `numbers`, and `-`).
+Given `--output-dir output`, generated report files include timestamp + resolver-prefixed artifacts (format `YYYY-MM-DD-HH-MM_<resolver-slug>_*`), and you can optionally include `--output-base-name` so files become `YYYY-MM-DD-HH-MM_<resolver-slug>_<base-name>_*` for easy run comparison. The base name is normalized to a conservative slug (`lowercase letters`, `numbers`, and `-`).
 
 Without `--output-base-name`:
 
-- `output/2026-04-16-14-30_capture.pcap`
-- `output/2026-04-16-14-30_summary.json`
-- `output/2026-04-16-14-30_report.md`
-- `output/2026-04-16-14-30_report.pdf`
-- `output/2026-04-16-14-30_latency_histogram.png`
-- `output/2026-04-16-14-30_latency_timeseries.png`
+- `output/2026-04-16-14-30_8-8-8-8_capture.pcap`
+- `output/2026-04-16-14-30_8-8-8-8_summary.json`
+- `output/2026-04-16-14-30_8-8-8-8_report.md`
+- `output/2026-04-16-14-30_8-8-8-8_report.pdf`
+- `output/2026-04-16-14-30_8-8-8-8_latency_histogram.png`
+- `output/2026-04-16-14-30_8-8-8-8_latency_timeseries.png`
 
 With `--output-base-name baseline-a`:
 
-- `output/2026-04-16-14-30_baseline-a_capture.pcap`
-- `output/2026-04-16-14-30_baseline-a_summary.json`
-- `output/2026-04-16-14-30_baseline-a_report.md`
+- `output/2026-04-16-14-30_8-8-8-8_baseline-a_capture.pcap`
+- `output/2026-04-16-14-30_8-8-8-8_baseline-a_summary.json`
+- `output/2026-04-16-14-30_8-8-8-8_baseline-a_report.md`
+
+## Prometheus textfile output
+
+Use `--output-format prometheus` to write only a textfile collector `.prom` artifact (no JSON/Markdown/PDF/PNG/PCAP files):
+
+```bash
+sudo "$(pwd)/.venv/bin/dns-latency-probe" \
+  --interface eth0 \
+  --domains-file examples/domains.txt \
+  --resolver 8.8.8.8 \
+  --duration 60 \
+  --output-format prometheus \
+  --prometheus-dir /var/lib/node_exporter/textfile_collector
+```
+
+The `.prom` file is written atomically (`*.tmp` then rename) for safe cron usage.
+In prometheus mode, filenames are stable per probe (`<resolver-slug>[_<base-name>].prom`) so each run replaces the same file.
 
 ## Testing
 

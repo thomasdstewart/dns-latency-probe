@@ -45,6 +45,15 @@ def test_normalize_output_base_name_uses_conservative_slug() -> None:
     assert normalize_output_base_name("  Baseline A @ Night #1 ") == "baseline-a-night-1"
 
 
+def test_config_validation_rejects_unknown_output_format(tmp_path: Path) -> None:
+    domains_file = tmp_path / "domains.txt"
+    domains_file.write_text("example.com\n", encoding="utf-8")
+
+    config = ProbeConfig(interface="lo", domains_file=domains_file, output_format="yaml")
+    with pytest.raises(ValueError, match="output-format"):
+        config.validate()
+
+
 def test_config_validation_accepts_hostname_resolver(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

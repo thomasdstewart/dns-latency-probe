@@ -83,6 +83,8 @@ class ProbeConfig:
     duration: float = 3600.0
     output_dir: Path = Path("output")
     output_base_name: str = ""
+    output_format: str = "reports"
+    prometheus_dir: Path = Path("metrics")
     pcap_file: str = "capture.pcap"
     log_level: str = "INFO"
 
@@ -90,6 +92,7 @@ class ProbeConfig:
         normalized_output_base_name = normalize_output_base_name(self.output_base_name)
         object.__setattr__(self, "output_base_name", normalized_output_base_name)
         object.__setattr__(self, "resolver", self.resolver.strip())
+        object.__setattr__(self, "output_format", self.output_format.strip().lower())
 
     def validate(self) -> None:
         if not self.interface.strip():
@@ -108,6 +111,8 @@ class ProbeConfig:
                 "output-base-name must normalize to a slug containing only lowercase "
                 "letters, numbers, and hyphens"
             )
+        if self.output_format not in {"reports", "prometheus"}:
+            raise ValueError("output-format must be either 'reports' or 'prometheus'")
         if not self.pcap_file.endswith(".pcap"):
             raise ValueError("pcap-file must end with .pcap")
 
