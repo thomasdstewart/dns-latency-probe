@@ -1,0 +1,38 @@
+{
+  "invocation_options": {
+    "interface": "end0",
+    "domains_file": "examples/domains.txt",
+    "resolver": "192.168.4.1",
+    "resolver_port": 53,
+    "rate": 2.0,
+    "duration": 300.0,
+    "output_dir": "examples",
+    "output_base_name": "nextdns-tcp",
+    "pcap_file": "capture.pcap",
+    "log_level": "INFO",
+    "source_ips": [
+      "192.168.4.10"
+    ]
+  },
+  "summary": {
+    "total_queries_sent": 602,
+    "matched_responses": 1742,
+    "unmatched_queries": 0,
+    "late_responses": 1,
+    "duplicate_response_candidates": 0,
+    "out_of_order_responses": 0,
+    "stale_responses": 0
+  },
+  "latency_statistics_seconds": {
+    "unit": "seconds",
+    "n": 1742,
+    "min": 0.000257,
+    "max": 4.283203,
+    "mean": 0.016294,
+    "median": 0.005786,
+    "stddev": 0.10647,
+    "p95": 0.054344,
+    "p99": 0.118483,
+    "pct_over_1s_percent": 0.057
+  }
+}
