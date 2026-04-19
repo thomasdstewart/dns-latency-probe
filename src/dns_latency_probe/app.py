@@ -64,10 +64,13 @@ def _build_artifact_paths(
     config: ProbeConfig, *, timestamp_prefix: str, output_base_name: str
 ) -> ArtifactPaths:
     resolver_slug = normalize_output_base_name(config.resolver) or "resolver"
-    prefix_parts = [timestamp_prefix, resolver_slug]
+    report_prefix_parts = [timestamp_prefix, resolver_slug]
+    metrics_prefix_parts = [resolver_slug]
     if output_base_name:
-        prefix_parts.append(output_base_name)
-    filename_prefix = "_".join(prefix_parts)
+        report_prefix_parts.append(output_base_name)
+        metrics_prefix_parts.append(output_base_name)
+    filename_prefix = "_".join(report_prefix_parts)
+    prometheus_prefix = "_".join(metrics_prefix_parts)
     return ArtifactPaths(
         pcap_path=config.output_dir / f"{filename_prefix}_{config.pcap_file}",
         json_path=config.output_dir / f"{filename_prefix}_summary.json",
@@ -75,7 +78,7 @@ def _build_artifact_paths(
         pdf_path=config.output_dir / f"{filename_prefix}_report.pdf",
         histogram_path=config.output_dir / f"{filename_prefix}_latency_histogram.png",
         timeseries_path=config.output_dir / f"{filename_prefix}_latency_timeseries.png",
-        prometheus_path=config.prometheus_dir / f"{filename_prefix}.prom",
+        prometheus_path=config.prometheus_dir / f"{prometheus_prefix}.prom",
     )
 
 

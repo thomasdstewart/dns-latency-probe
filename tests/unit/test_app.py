@@ -301,4 +301,4 @@ def test_run_probe_prometheus_mode_disables_report_outputs(
     assert stop_capture_pcap_path is None
     assert prom_emit_called
     assert not report_emit_attempted
-    assert artifacts.prometheus_path.name.endswith("_8-8-8-8.prom")
+    assert artifacts.prometheus_path.name == "8-8-8-8.prom"

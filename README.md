@@ -101,6 +101,7 @@ sudo "$(pwd)/.venv/bin/dns-latency-probe" \
 ```
 
 The `.prom` file is written atomically (`*.tmp` then rename) for safe cron usage.
+In prometheus mode, filenames are stable per probe (`<resolver-slug>[_<base-name>].prom`) so each run replaces the same file.
 
 ## Testing
 
