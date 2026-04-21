@@ -163,5 +163,58 @@ def test_plotting_preserves_high_latency_values(
         run_date="2026-04-17",
     )
 
-    assert 12.5 in histogram_inputs
-    assert 12.5 in timeseries_inputs
+    assert 10.0 in histogram_inputs
+    assert 10.0 in timeseries_inputs
+
+
+def test_plotting_preserves_low_latency_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    timeseries_inputs: list[float] = []
+
+    def capture_plot(*args: object, **kwargs: object) -> None:
+        _ = kwargs
+        if len(args) >= 2:
+            ys = args[1]
+            if isinstance(ys, list):
+                timeseries_inputs.extend(ys)
+
+    monkeypatch.setattr(plt, "plot", capture_plot)
+
+    output_timeseries = tmp_path / "low-latency-series.png"
+    plot_latency_timeseries(
+        matched=[
+            MatchedPair(
+                query=QueryRecord(
+                    sent_at=1_700_000_000.0,
+                    txid=1,
+                    qname="example.com",
+                    qtype=1,
+                    protocol="udp",
+                    src_ip="127.0.0.1",
+                    src_port=53000,
+                    dst_ip="127.0.0.1",
+                    dst_port=53,
+                ),
+                response=ResponseRecord(
+                    seen_at=1_700_000_000.0001,
+                    txid=1,
+                    qname="example.com",
+                    qtype=1,
+                    protocol="udp",
+                    src_ip="127.0.0.1",
+                    src_port=53,
+                    dst_ip="127.0.0.1",
+                    dst_port=53000,
+                ),
+                latency_seconds=1e-4,
+            )
+        ],
+        output_path=output_timeseries,
+        resolver="127.0.0.1",
+        duration_seconds=1.0,
+        sender_source_ip="127.0.0.1",
+        run_date="2026-04-17",
+    )
+
+    assert 1e-4 in timeseries_inputs
