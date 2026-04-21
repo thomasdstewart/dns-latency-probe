@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from contextlib import suppress
 from pathlib import Path
+from typing import List
 
 import matplotlib.pyplot as plt
 
@@ -14,7 +13,7 @@ LATENCY_MIN_SECONDS = 1e-3
 LATENCY_MAX_SECONDS = 1e1
 
 
-def _clip_latencies(latencies: list[float]) -> list[float]:
+def _clip_latencies(latencies: List[float]) -> List[float]:
     return [min(latency, LATENCY_MAX_SECONDS) for latency in latencies]
 
 
@@ -57,7 +56,7 @@ def _plot_title(
 
 
 def plot_latency_histogram(
-    latencies: list[float],
+    latencies: List[float],
     output_path: Path,
     resolver: str,
     duration_seconds: float,
@@ -85,7 +84,7 @@ def plot_latency_histogram(
 
 
 def plot_latency_timeseries(
-    matched: list[MatchedPair],
+    matched: List[MatchedPair],
     output_path: Path,
     resolver: str,
     duration_seconds: float,
@@ -94,8 +93,8 @@ def plot_latency_timeseries(
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if not matched:
-        xs: list[float] = []
-        ys: list[float] = []
+        xs: List[float] = []
+        ys: List[float] = []
     else:
         t0 = matched[0].query.sent_at
         xs = [pair.query.sent_at - t0 for pair in matched]

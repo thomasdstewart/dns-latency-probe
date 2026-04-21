@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 import os
 from pathlib import Path
+from typing import Optional
 
 from dns_latency_probe.analysis import LatencyStats
 
@@ -10,7 +9,7 @@ def _escape_label_value(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
 
 
-def _format_float(value: float | None) -> str:
+def _format_float(value: Optional[float]) -> str:
     if value is None:
         return "NaN"
     return f"{value:.12g}"

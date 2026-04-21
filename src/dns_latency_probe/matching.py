@@ -1,13 +1,12 @@
-from __future__ import annotations
-
 from collections import defaultdict, deque
+from typing import Dict, List, Optional, Tuple
 
 from dns_latency_probe.models import MatchedPair, QueryRecord, ResponseRecord
 
 
 def _query_key(
     query: QueryRecord,
-) -> tuple[int, str, int, str, str | None, int, str, int]:
+) -> Tuple[int, str, int, str, Optional[str], int, str, int]:
     return (
         query.txid,
         query.qname,
@@ -22,7 +21,7 @@ def _query_key(
 
 def _response_to_query_key(
     response: ResponseRecord,
-) -> tuple[int, str, int, str, str | None, int, str, int]:
+) -> Tuple[int, str, int, str, Optional[str], int, str, int]:
     return (
         response.txid,
         response.qname,
@@ -36,19 +35,19 @@ def _response_to_query_key(
 
 
 def match_dns_queries(
-    queries: list[QueryRecord], responses: list[ResponseRecord], late_threshold_seconds: float = 1.0
-) -> tuple[list[MatchedPair], list[QueryRecord], int, int, int, int]:
-    pending: dict[
-        tuple[int, str, int, str, str | None, int, str, int],
+    queries: List[QueryRecord], responses: List[ResponseRecord], late_threshold_seconds: float = 1.0
+) -> Tuple[List[MatchedPair], List[QueryRecord], int, int, int, int]:
+    pending: Dict[
+        Tuple[int, str, int, str, Optional[str], int, str, int],
         deque[QueryRecord],
     ] = defaultdict(deque)
 
     for query in sorted(queries, key=lambda x: x.sent_at):
         pending[_query_key(query)].append(query)
 
-    matched: list[MatchedPair] = []
+    matched: List[MatchedPair] = []
     query_keys = set(pending.keys())
-    last_matched_sent_at: dict[tuple[int, str, int, str, str | None, int, str, int], float] = {}
+    last_matched_sent_at: Dict[Tuple[int, str, int, str, Optional[str], int, str, int], float] = {}
     duplicates = 0
     out_of_order = 0
     stale = 0

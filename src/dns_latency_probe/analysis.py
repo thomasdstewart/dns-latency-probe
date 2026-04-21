@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 import math
 from dataclasses import asdict, dataclass
 from statistics import mean, median, pstdev
+from typing import Dict, List, Optional
 
 
-@dataclass(slots=True)
+@dataclass
 class LatencyStats:
     total_queries_sent: int
     matched_responses: int
@@ -15,20 +14,20 @@ class LatencyStats:
     out_of_order_responses: int
     stale_responses: int
     n: int
-    min_seconds: float | None
-    max_seconds: float | None
-    mean_seconds: float | None
-    median_seconds: float | None
-    stdev_seconds: float | None
-    p95_seconds: float | None
-    p99_seconds: float | None
-    pct_over_1s: float | None
+    min_seconds: Optional[float]
+    max_seconds: Optional[float]
+    mean_seconds: Optional[float]
+    median_seconds: Optional[float]
+    stdev_seconds: Optional[float]
+    p95_seconds: Optional[float]
+    p99_seconds: Optional[float]
+    pct_over_1s: Optional[float]
 
-    def to_dict(self) -> dict[str, float | int | None]:
+    def to_dict(self) -> Dict[str, object]:
         return asdict(self)
 
 
-def _percentile(sorted_values: list[float], pct: float) -> float:
+def _percentile(sorted_values: List[float], pct: float) -> float:
     if not sorted_values:
         raise ValueError("values must not be empty")
     index = math.ceil((pct / 100.0) * len(sorted_values)) - 1
@@ -38,7 +37,7 @@ def _percentile(sorted_values: list[float], pct: float) -> float:
 
 def compute_latency_stats(
     *,
-    latencies: list[float],
+    latencies: List[float],
     total_queries_sent: int,
     unmatched_queries: int,
     late_responses: int,

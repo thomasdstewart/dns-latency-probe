@@ -9,7 +9,7 @@
 
 ## Features
 
-- Python 3.12+
+- Python 3.6+ (RHEL 8 compatible)
 - Scapy for packet generation, sending, and capture
 - Rate-controlled query loop over a domain list
 - Coordinated stop event + threaded shutdown

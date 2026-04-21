@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ipaddress
 import re
 import socket
@@ -73,7 +71,7 @@ def validate_resolver_target(resolver: str, resolver_port: int) -> None:
         )
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class ProbeConfig:
     interface: str
     domains_file: Path

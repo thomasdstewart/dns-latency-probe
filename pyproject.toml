@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=59", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,12 +7,13 @@ name = "dns-latency-probe"
 version = "0.1.0"
 description = "CLI tool to measure DNS response latency using Scapy"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.6"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "dns-latency-probe contributors" }]
 dependencies = [
-  "scapy>=2.5.0",
-  "matplotlib>=3.9.0",
+  "scapy>=2.4.5",
+  "matplotlib>=3.3.4",
+  "dataclasses>=0.8; python_version < '3.7'",
 ]
 
 [project.optional-dependencies]
@@ -36,11 +37,11 @@ where = ["src"]
 
 [tool.black]
 line-length = 100
-target-version = ["py312", "py313"]
+target-version = ["py36"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py36"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "SIM", "C4", "ARG", "RUF"]
@@ -50,7 +51,7 @@ ignore = ["ARG001"]
 "tests/**/*.py" = ["S101"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.6"
 strict = true
 warn_unused_configs = true
 warn_return_any = true

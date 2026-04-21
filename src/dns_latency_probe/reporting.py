@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -21,32 +19,32 @@ else:
     PDF_PAGES_FACTORY = PdfPages
 
 
-def _round_seconds(value: float | None) -> float | None:
+def _round_seconds(value: Optional[float]) -> Optional[float]:
     if value is None:
         return None
     return round(value, _SECONDS_DECIMALS)
 
 
-def _round_percent(value: float | None) -> float | None:
+def _round_percent(value: Optional[float]) -> Optional[float]:
     if value is None:
         return None
     return round(value, _PERCENT_DECIMALS)
 
 
-def _format_seconds(value: float | None) -> str:
+def _format_seconds(value: Optional[float]) -> str:
     if value is None:
         return "N/A"
     return f"{value:.{_SECONDS_DECIMALS}f} s"
 
 
-def _format_percent(value: float | None) -> str:
+def _format_percent(value: Optional[float]) -> str:
     if value is None:
         return "N/A"
     return f"{value:.{_PERCENT_DECIMALS}f}%"
 
 
 def write_json_summary(
-    stats: LatencyStats, invocation_options: dict[str, object], output_path: Path
+    stats: LatencyStats, invocation_options: Dict[str, object], output_path: Path
 ) -> None:
     report = {
         "invocation_options": invocation_options,
@@ -120,7 +118,7 @@ def write_markdown_report(
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def _render_markdown_lines(markdown_path: Path) -> list[str]:
+def _render_markdown_lines(markdown_path: Path) -> List[str]:
     markdown_contents = markdown_path.read_text(encoding="utf-8")
     return [line.rstrip() for line in markdown_contents.splitlines() if line.strip()]
 

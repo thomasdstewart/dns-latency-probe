@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 import logging
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List, Optional, Tuple
 
 from scapy.layers.dns import DNS, DNSQR
 from scapy.layers.inet import IP, TCP, UDP
@@ -17,12 +16,12 @@ from dns_latency_probe.models import QueryRecord, ResponseRecord
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class CaptureSession:
     sniffer: AsyncSniffer
-    packets: list[Packet]
+    packets: List[Packet]
     packets_lock: threading.Lock
-    packet_count: list[int]
+    packet_count: List[int]
     reporter_stop_event: threading.Event
     reporter_thread: threading.Thread
 
@@ -32,7 +31,7 @@ def dns_bpf_filter() -> str:
 
 
 def start_capture(interface: str) -> CaptureSession:
-    packets: list[Packet] = []
+    packets: List[Packet] = []
     packets_lock = threading.Lock()
     packet_count = [0]
     ready = threading.Event()
@@ -78,7 +77,7 @@ def start_capture(interface: str) -> CaptureSession:
     )
 
 
-def stop_capture(session: CaptureSession, pcap_path: Path | None) -> list[Packet]:
+def stop_capture(session: CaptureSession, pcap_path: Optional[Path]) -> List[Packet]:
     session.reporter_stop_event.set()
     session.reporter_thread.join(timeout=1)
     session.sniffer.stop(join=True)
@@ -100,7 +99,7 @@ def _qname_from_question(question: DNSQR) -> str:
     return qname
 
 
-def _first_dns_question(dns: DNS) -> DNSQR | None:
+def _first_dns_question(dns: DNS) -> Optional[DNSQR]:
     qd = dns.qd
     if qd is None:
         return None
@@ -115,9 +114,9 @@ def _first_dns_question(dns: DNS) -> DNSQR | None:
     return None
 
 
-def extract_dns_records(packets: list[Packet]) -> tuple[list[QueryRecord], list[ResponseRecord]]:
-    queries: list[QueryRecord] = []
-    responses: list[ResponseRecord] = []
+def extract_dns_records(packets: List[Packet]) -> Tuple[List[QueryRecord], List[ResponseRecord]]:
+    queries: List[QueryRecord] = []
+    responses: List[ResponseRecord] = []
 
     for packet in packets:
         if DNS not in packet or IP not in packet:

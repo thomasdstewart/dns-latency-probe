@@ -1,22 +1,21 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
+from typing import Optional
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class QueryRecord:
     sent_at: float
     txid: int
     qname: str
     qtype: int
     protocol: str
-    src_ip: str | None
+    src_ip: Optional[str]
     src_port: int
     dst_ip: str
     dst_port: int
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class ResponseRecord:
     seen_at: float
     txid: int
@@ -29,7 +28,7 @@ class ResponseRecord:
     dst_port: int
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True)
 class MatchedPair:
     query: QueryRecord
     response: ResponseRecord

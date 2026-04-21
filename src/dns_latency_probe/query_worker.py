@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import logging
 import random
 import threading
 import time
-from collections.abc import Callable
+from typing import Callable, List, Optional
 
 from scapy.config import conf
 from scapy.layers.dns import DNS, DNSQR
@@ -38,7 +36,7 @@ def build_query_packet(
     )
 
 
-def resolve_source_ip(resolver: str) -> str | None:
+def resolve_source_ip(resolver: str) -> Optional[str]:
     try:
         route = conf.route.route(resolver)
     except Exception:  # pragma: no cover - defensive fallback for platform-specific route failures
@@ -52,13 +50,13 @@ def resolve_source_ip(resolver: str) -> str | None:
 
 def run_query_loop(
     *,
-    domains: list[str],
+    domains: List[str],
     resolver: str,
     resolver_port: int,
     rate: float,
     stop_event: threading.Event,
-    sent_queries: list[QueryRecord],
-    expected_queries: int | None = None,
+    sent_queries: List[QueryRecord],
+    expected_queries: Optional[int] = None,
     sender: Sender = default_sender,
 ) -> None:
     limiter = RateLimiter(rate)

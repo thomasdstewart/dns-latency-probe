@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 import logging
 import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 from scapy.packet import Packet
 
@@ -23,7 +22,7 @@ from dns_latency_probe.reporting import write_json_summary, write_markdown_repor
 LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class RunArtifacts:
     pcap_path: Path
     json_path: Path
@@ -35,7 +34,7 @@ class RunArtifacts:
     stats: LatencyStats
 
 
-@dataclass(slots=True)
+@dataclass
 class ArtifactPaths:
     pcap_path: Path
     json_path: Path
@@ -85,10 +84,10 @@ def _build_artifact_paths(
 def _run_capture_phase(
     *,
     config: ProbeConfig,
-    domains: list[str],
-    pcap_path: Path | None,
-) -> tuple[list[Packet], list[QueryRecord]]:
-    sent_queries: list[QueryRecord] = []
+    domains: List[str],
+    pcap_path: Optional[Path],
+) -> Tuple[List[Packet], List[QueryRecord]]:
+    sent_queries: List[QueryRecord] = []
     capture_session = start_capture(config.interface)
     stop_event = threading.Event()
     expected_queries = max(int(config.rate * config.duration), 1)
@@ -132,14 +131,14 @@ def _emit_reports(
     config: ProbeConfig,
     paths: ArtifactPaths,
     stats: LatencyStats,
-    capture_queries: list[QueryRecord],
-    latencies: list[float],
-    matched: list[MatchedPair],
+    capture_queries: List[QueryRecord],
+    latencies: List[float],
+    matched: List[MatchedPair],
     run_date: str,
 ) -> None:
     src_ips = sorted({query.src_ip for query in capture_queries if query.src_ip is not None})
     sender_source_ip = ",".join(src_ips) if src_ips else "unknown"
-    invocation_options: dict[str, object] = {
+    invocation_options: Dict[str, object] = {
         "interface": config.interface,
         "domains_file": str(config.domains_file),
         "resolver": config.resolver,
