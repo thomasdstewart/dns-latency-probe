@@ -35,6 +35,45 @@ pip install -c constraints.txt -e .[dev]
 For reproducible installs across local and CI environments, this repository ships a pinned `constraints.txt` file.
 Apply it to every install command with `-c constraints.txt`.
 
+## Container build and run (Podman on RHEL 8)
+
+Build the container image from the repository root:
+
+```bash
+podman build -t dns-latency-probe:latest .
+```
+
+Run the probe with host networking and the capabilities needed for raw packet send/capture.
+This example mounts `examples/` read-only for domains input and writes artifacts to `./output` on the host:
+
+```bash
+mkdir -p output
+
+podman run --rm \
+  --network host \
+  --cap-add NET_RAW \
+  --cap-add NET_ADMIN \
+  -v "$(pwd)/examples:/app/examples:ro,Z" \
+  -v "$(pwd)/output:/app/output:Z" \
+  dns-latency-probe:latest \
+  --interface eth0 \
+  --domains-file /app/examples/domains.txt \
+  --resolver 8.8.8.8 \
+  --rate 20 \
+  --duration 60 \
+  --output-dir /app/output \
+  --output-base-name baseline-a \
+  --output-format reports \
+  --pcap-file /app/output/capture.pcap \
+  --log-level INFO
+```
+
+Notes:
+
+- Replace `eth0` with the correct host interface for your system.
+- If SELinux is enforcing, the `:Z` volume suffix labels bind mounts for container access.
+- You may need to run Podman with elevated privileges depending on your environment and capture policy.
+
 ## Privilege considerations
 
 Live packet capture and raw packet sending on Linux often require elevated privileges (e.g., root or `CAP_NET_RAW`/`CAP_NET_ADMIN`).
