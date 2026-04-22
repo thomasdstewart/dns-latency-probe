@@ -1,4 +1,2 @@
-# Intentionally unpinned to always resolve latest available dependency versions.
-# Usage:
-#   pip install -c constraints.txt -e .
-#   pip install -c constraints.txt -e .[dev]
+# Keep Black pinned for deterministic formatting in CI and local runs.
+black==25.12.0
