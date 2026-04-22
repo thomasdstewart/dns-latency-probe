@@ -4,6 +4,8 @@ from contextlib import suppress
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.ticker import FixedLocator
 
 from dns_latency_probe.models import MatchedPair
 
@@ -12,6 +14,21 @@ plt.switch_backend("Agg")
 
 LATENCY_MIN_SECONDS = 1e-3
 LATENCY_MAX_SECONDS = 1e1
+LOG_MAJOR_TICKS = [1e-3, 1e-2, 1e-1, 1e0, 1e1]
+LOG_MINOR_TICKS = [
+    value
+    for decade in (1e-3, 1e-2, 1e-1, 1e0)
+    for value in [
+        2 * decade,
+        3 * decade,
+        4 * decade,
+        5 * decade,
+        6 * decade,
+        7 * decade,
+        8 * decade,
+        9 * decade,
+    ]
+]
 
 
 def _clip_latencies(latencies: list[float]) -> list[float]:
@@ -54,6 +71,17 @@ def _plot_title(
         f"{base_title} (resolver={resolver}, duration={duration_seconds:g}s, "
         f"source_ip={sender_source_ip}, run_date={run_date})"
     )
+
+
+def _configure_log_latency_axis(axis: Axes) -> None:
+    axis.set_yscale("symlog", linthresh=LATENCY_MIN_SECONDS)
+    axis.set_ylim(LATENCY_MIN_SECONDS, LATENCY_MAX_SECONDS)
+    axis.yaxis.set_major_locator(FixedLocator(LOG_MAJOR_TICKS))
+    axis.yaxis.set_minor_locator(FixedLocator(LOG_MINOR_TICKS))
+    axis.tick_params(axis="y", which="major", length=6, width=1)
+    axis.tick_params(axis="y", which="minor", length=3, width=0.8)
+    axis.grid(True, axis="y", which="major", linestyle="--", alpha=0.35)
+    axis.grid(True, axis="y", which="minor", linestyle=":", alpha=0.2)
 
 
 def plot_latency_histogram(
@@ -114,8 +142,7 @@ def plot_latency_timeseries(
     )
     plt.xlabel("Elapsed Time (seconds)")
     plt.ylabel("Latency (seconds)")
-    plt.yscale("symlog", linthresh=LATENCY_MIN_SECONDS)
-    plt.ylim(LATENCY_MIN_SECONDS, LATENCY_MAX_SECONDS)
+    _configure_log_latency_axis(plt.gca())
     _apply_layout()
     _save_with_fallback(output_path, "DNS Response Time Over Time")
     plt.close()

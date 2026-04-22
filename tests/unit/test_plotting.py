@@ -4,9 +4,16 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest
+from matplotlib.ticker import FixedLocator
 
 from dns_latency_probe.models import MatchedPair, QueryRecord, ResponseRecord
-from dns_latency_probe.plotting import plot_latency_histogram, plot_latency_timeseries
+from dns_latency_probe.plotting import (
+    LOG_MAJOR_TICKS,
+    LOG_MINOR_TICKS,
+    _configure_log_latency_axis,
+    plot_latency_histogram,
+    plot_latency_timeseries,
+)
 
 
 def _matched_pair() -> MatchedPair:
@@ -218,3 +225,18 @@ def test_plotting_preserves_low_latency_values(
     )
 
     assert 1e-4 in timeseries_inputs
+
+
+def test_configure_log_latency_axis_adds_major_and_minor_ticks() -> None:
+    figure, axis = plt.subplots()
+    _configure_log_latency_axis(axis)
+
+    major_locator = axis.yaxis.get_major_locator()
+    minor_locator = axis.yaxis.get_minor_locator()
+
+    assert isinstance(major_locator, FixedLocator)
+    assert isinstance(minor_locator, FixedLocator)
+    assert list(major_locator.tick_values(0.0, 1.0)) == LOG_MAJOR_TICKS
+    assert list(minor_locator.tick_values(0.0, 1.0)) == LOG_MINOR_TICKS
+
+    plt.close(figure)
