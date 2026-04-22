@@ -236,7 +236,7 @@ def test_configure_log_latency_axis_adds_major_and_minor_ticks() -> None:
 
     assert isinstance(major_locator, FixedLocator)
     assert isinstance(minor_locator, FixedLocator)
-    assert list(major_locator.locs) == LOG_MAJOR_TICKS
-    assert list(minor_locator.locs) == LOG_MINOR_TICKS
+    assert list(major_locator.tick_values(0.0, 1.0)) == LOG_MAJOR_TICKS
+    assert list(minor_locator.tick_values(0.0, 1.0)) == LOG_MINOR_TICKS
 
     plt.close(figure)
