@@ -9,7 +9,10 @@ COPY constraints.txt pyproject.toml README.md ./
 COPY src ./src
 COPY examples ./examples
 
-RUN python -m pip install --upgrade pip \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpcap0.8 \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip install --upgrade pip \
     && pip install --no-cache-dir -c constraints.txt .
 
 ENTRYPOINT ["dns-latency-probe"]
