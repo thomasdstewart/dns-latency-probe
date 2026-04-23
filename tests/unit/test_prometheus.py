@@ -39,7 +39,7 @@ def test_write_prometheus_textfile_writes_atomic_metrics_file(tmp_path: Path) ->
 
     contents = output_path.read_text(encoding="utf-8")
     assert 'resolver="dns\\"google"' in contents
-    assert "dns_probe_run_success" in contents
-    assert "dns_probe_latency_p99_seconds" in contents
-    assert "dns_probe_last_run_unixtime" in contents
+    assert "dns_latency_probe_run_success" in contents
+    assert "dns_latency_probe_latency_p99_seconds" in contents
+    assert "dns_latency_probe_last_run_unixtime" in contents
     assert not (tmp_path / "dns.prom.tmp").exists()
