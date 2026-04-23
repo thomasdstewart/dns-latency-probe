@@ -51,7 +51,10 @@ def write_prometheus_textfile(
         "# HELP dns_latency_probe_late_responses DNS responses over 1 second latency.",
         "# TYPE dns_latency_probe_late_responses gauge",
         f"dns_latency_probe_late_responses{{{labels}}} {stats.late_responses}",
-        "# HELP dns_latency_probe_duplicate_response_candidates Duplicate response candidates dropped.",
+        (
+            "# HELP dns_latency_probe_duplicate_response_candidates "
+            "Duplicate response candidates dropped."
+        ),
         "# TYPE dns_latency_probe_duplicate_response_candidates gauge",
         (
             "dns_latency_probe_duplicate_response_candidates"
@@ -60,7 +63,10 @@ def write_prometheus_textfile(
         "# HELP dns_latency_probe_out_of_order_responses Out-of-order DNS responses.",
         "# TYPE dns_latency_probe_out_of_order_responses gauge",
         f"dns_latency_probe_out_of_order_responses{{{labels}}} {stats.out_of_order_responses}",
-        "# HELP dns_latency_probe_stale_responses Stale DNS responses that did not match current queries.",
+        (
+            "# HELP dns_latency_probe_stale_responses "
+            "Stale DNS responses that did not match current queries."
+        ),
         "# TYPE dns_latency_probe_stale_responses gauge",
         f"dns_latency_probe_stale_responses{{{labels}}} {stats.stale_responses}",
         "# HELP dns_latency_probe_latency_min_seconds Minimum matched DNS latency in seconds.",
@@ -74,14 +80,26 @@ def write_prometheus_textfile(
         f"dns_latency_probe_latency_mean_seconds{{{labels}}} {_format_float(stats.mean_seconds)}",
         "# HELP dns_latency_probe_latency_median_seconds Median matched DNS latency in seconds.",
         "# TYPE dns_latency_probe_latency_median_seconds gauge",
-        ("dns_latency_probe_latency_median_seconds" f"{{{labels}}} {_format_float(stats.median_seconds)}"),
+        (
+            "dns_latency_probe_latency_median_seconds"
+            f"{{{labels}}} {_format_float(stats.median_seconds)}"
+        ),
         "# HELP dns_latency_probe_latency_stddev_seconds Stddev of matched DNS latency in seconds.",
         "# TYPE dns_latency_probe_latency_stddev_seconds gauge",
-        ("dns_latency_probe_latency_stddev_seconds" f"{{{labels}}} {_format_float(stats.stdev_seconds)}"),
-        "# HELP dns_latency_probe_latency_p95_seconds 95th percentile matched DNS latency in seconds.",
+        (
+            "dns_latency_probe_latency_stddev_seconds"
+            f"{{{labels}}} {_format_float(stats.stdev_seconds)}"
+        ),
+        (
+            "# HELP dns_latency_probe_latency_p95_seconds "
+            "95th percentile matched DNS latency in seconds."
+        ),
         "# TYPE dns_latency_probe_latency_p95_seconds gauge",
         f"dns_latency_probe_latency_p95_seconds{{{labels}}} {_format_float(stats.p95_seconds)}",
-        "# HELP dns_latency_probe_latency_p99_seconds 99th percentile matched DNS latency in seconds.",
+        (
+            "# HELP dns_latency_probe_latency_p99_seconds "
+            "99th percentile matched DNS latency in seconds."
+        ),
         "# TYPE dns_latency_probe_latency_p99_seconds gauge",
         f"dns_latency_probe_latency_p99_seconds{{{labels}}} {_format_float(stats.p99_seconds)}",
         (
@@ -89,7 +107,10 @@ def write_prometheus_textfile(
             "Percentage of matched responses above one second."
         ),
         "# TYPE dns_latency_probe_latency_over_1s_percent gauge",
-        ("dns_latency_probe_latency_over_1s_percent" f"{{{labels}}} {_format_float(stats.pct_over_1s)}"),
+        (
+            "dns_latency_probe_latency_over_1s_percent"
+            f"{{{labels}}} {_format_float(stats.pct_over_1s)}"
+        ),
         "",
     ]
     temporary_path = output_path.with_suffix(f"{output_path.suffix}.tmp")
