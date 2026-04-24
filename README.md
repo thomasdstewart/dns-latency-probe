@@ -90,3 +90,7 @@ podman run --rm \
   --output-format prometheus \
   --prometheus-dir /app/output
 ```
+
+## Architecture
+
+- UML diagrams: [`docs/application-uml.md`](docs/application-uml.md)
