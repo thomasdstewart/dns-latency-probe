@@ -29,3 +29,9 @@ def test_cli_main_handles_runtime_error(tmp_path: Path) -> None:
         ]
     )
     assert exit_code == 1
+
+
+def test_cli_compare_requires_two_files(tmp_path: Path) -> None:
+    summary = tmp_path / "one.json"
+    summary.write_text("{}", encoding="utf-8")
+    assert main(["--compare-json", str(summary)]) == 1

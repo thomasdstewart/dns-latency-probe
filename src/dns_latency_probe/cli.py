@@ -4,7 +4,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from dns_latency_probe.app import run_probe
+from dns_latency_probe.app import compare_runs_from_json, run_probe
 from dns_latency_probe.config import ProbeConfig
 from dns_latency_probe.domains import DomainFileError
 
@@ -13,9 +13,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Measure DNS latency by sending DNS A queries with Scapy"
     )
-    parser.add_argument("--interface", required=True, help="Network interface for packet capture")
+    parser.add_argument("--interface", help="Network interface for packet capture")
     parser.add_argument(
-        "--domains-file", required=True, type=Path, help="UTF-8 text file with domains"
+        "--domains-file", type=Path, help="UTF-8 text file with domains"
+    )
+    parser.add_argument(
+        "--compare-json",
+        nargs="+",
+        type=Path,
+        help="Read one or more summary JSON files and generate a comparison plot",
     )
     parser.add_argument(
         "--resolver",
@@ -63,6 +69,19 @@ def main(argv: list[str] | None = None) -> int:
         level=getattr(logging, args.log_level.upper()),
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     )
+
+    if args.compare_json:
+        if len(args.compare_json) < 2:
+            logger = logging.getLogger(__name__)
+            logger.error("--compare-json requires at least two files")
+            return 1
+        output_path = compare_runs_from_json(args.compare_json, args.output_dir)
+        logging.getLogger(__name__).info("Comparison plot=%s", output_path)
+        return 0
+
+    if not args.interface or not args.domains_file:
+        logging.getLogger(__name__).error("--interface and --domains-file are required unless --compare-json is used")
+        return 1
 
     config = ProbeConfig(
         interface=args.interface,
