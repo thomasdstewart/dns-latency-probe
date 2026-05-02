@@ -71,12 +71,19 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if args.compare_json:
+        logger = logging.getLogger(__name__)
         if len(args.compare_json) < 2:
-            logger = logging.getLogger(__name__)
             logger.error("--compare-json requires at least two files")
             return 1
-        output_path = compare_runs_from_json(args.compare_json, args.output_dir)
-        logging.getLogger(__name__).info("Comparison plot=%s", output_path)
+        try:
+            output_path = compare_runs_from_json(args.compare_json, args.output_dir)
+        except (ValueError, OSError, RuntimeError) as exc:
+            logger.error("Comparison failed: %s", exc)
+            return 1
+        except Exception:
+            logger.exception("Comparison failed due to an unexpected error")
+            return 1
+        logger.info("Comparison plot=%s", output_path)
         return 0
 
     if not args.interface or not args.domains_file:
