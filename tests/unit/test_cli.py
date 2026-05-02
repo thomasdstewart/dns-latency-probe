@@ -49,5 +49,5 @@ def test_cli_compare_handles_missing_latencies(tmp_path: Path) -> None:
     one = tmp_path / "one.json"
     two = tmp_path / "two.json"
     one.write_text('{"latencies_seconds": [0.1]}', encoding="utf-8")
-    two.write_text('{}', encoding="utf-8")
+    two.write_text("{}", encoding="utf-8")
     assert main(["--compare-json", str(one), str(two)]) == 1

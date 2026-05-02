@@ -14,9 +14,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Measure DNS latency by sending DNS A queries with Scapy"
     )
     parser.add_argument("--interface", help="Network interface for packet capture")
-    parser.add_argument(
-        "--domains-file", type=Path, help="UTF-8 text file with domains"
-    )
+    parser.add_argument("--domains-file", type=Path, help="UTF-8 text file with domains")
     parser.add_argument(
         "--compare-json",
         nargs="+",
