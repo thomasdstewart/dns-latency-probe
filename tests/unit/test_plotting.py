@@ -12,8 +12,8 @@ from dns_latency_probe.plotting import (
     LOG_MINOR_TICKS,
     _configure_log_latency_axis,
     plot_latency_histogram,
-    plot_latency_timeseries,
     plot_latency_run_comparison,
+    plot_latency_timeseries,
 )
 
 

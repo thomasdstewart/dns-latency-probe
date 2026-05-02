@@ -15,7 +15,11 @@ from dns_latency_probe.config import ProbeConfig, normalize_output_base_name
 from dns_latency_probe.domains import load_domains
 from dns_latency_probe.matching import match_dns_queries
 from dns_latency_probe.models import MatchedPair, QueryRecord
-from dns_latency_probe.plotting import plot_latency_histogram, plot_latency_run_comparison, plot_latency_timeseries
+from dns_latency_probe.plotting import (
+    plot_latency_histogram,
+    plot_latency_run_comparison,
+    plot_latency_timeseries,
+)
 from dns_latency_probe.prometheus import write_prometheus_textfile
 from dns_latency_probe.query_worker import run_query_loop
 from dns_latency_probe.reporting import write_json_summary, write_markdown_report, write_pdf_report

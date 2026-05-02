@@ -160,11 +160,28 @@ def plot_latency_run_comparison(
     for index, latencies in enumerate(clipped_runs, start=1):
         if not latencies:
             continue
-        axis.plot([index] * len(latencies), latencies, marker="o", linestyle="none", markersize=3, alpha=0.45)
+        axis.plot(
+            [index] * len(latencies),
+            latencies,
+            marker="o",
+            linestyle="none",
+            markersize=3,
+            alpha=0.45,
+        )
 
     non_empty_runs = [latencies for latencies in clipped_runs if latencies]
     if non_empty_runs:
-        axis.boxplot(non_empty_runs, positions=[i for i,l in enumerate(clipped_runs, start=1) if l], widths=0.35, showfliers=False)
+        positions = [
+            run_index
+            for run_index, run_latencies in enumerate(clipped_runs, start=1)
+            if run_latencies
+        ]
+        axis.boxplot(
+            non_empty_runs,
+            positions=positions,
+            widths=0.35,
+            showfliers=False,
+        )
 
     axis.set_title("DNS Latency Comparison Across Runs")
     axis.set_xlabel("Run")

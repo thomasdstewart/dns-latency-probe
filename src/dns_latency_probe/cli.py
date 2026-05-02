@@ -87,7 +87,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if not args.interface or not args.domains_file:
-        logging.getLogger(__name__).error("--interface and --domains-file are required unless --compare-json is used")
+        logging.getLogger(__name__).error(
+            "--interface and --domains-file are required unless --compare-json is used"
+        )
         return 1
 
     config = ProbeConfig(

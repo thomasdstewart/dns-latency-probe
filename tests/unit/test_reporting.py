@@ -67,6 +67,11 @@ def test_write_markdown_report_formats_units_and_precision(tmp_path: Path) -> No
 
 def test_write_json_summary_includes_latencies(tmp_path: Path) -> None:
     output_path = tmp_path / "summary.json"
-    write_json_summary(_stats(), {"resolver": "1.1.1.1"}, output_path, latencies_seconds=[0.12345678, 1.23456789])
+    write_json_summary(
+        _stats(),
+        {"resolver": "1.1.1.1"},
+        output_path,
+        latencies_seconds=[0.12345678, 1.23456789],
+    )
     report = json.loads(output_path.read_text(encoding="utf-8"))
     assert report["latencies_seconds"] == [0.123457, 1.234568]
