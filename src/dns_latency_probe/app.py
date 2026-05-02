@@ -15,7 +15,11 @@ from dns_latency_probe.config import ProbeConfig, normalize_output_base_name
 from dns_latency_probe.domains import load_domains
 from dns_latency_probe.matching import match_dns_queries
 from dns_latency_probe.models import MatchedPair, QueryRecord
-from dns_latency_probe.plotting import plot_latency_histogram, plot_latency_timeseries
+from dns_latency_probe.plotting import (
+    plot_latency_histogram,
+    plot_latency_run_comparison,
+    plot_latency_timeseries,
+)
 from dns_latency_probe.prometheus import write_prometheus_textfile
 from dns_latency_probe.query_worker import run_query_loop
 from dns_latency_probe.reporting import write_json_summary, write_markdown_report, write_pdf_report
@@ -153,7 +157,7 @@ def _emit_reports(
         "source_ips": src_ips,
     }
 
-    write_json_summary(stats, invocation_options, paths.json_path)
+    write_json_summary(stats, invocation_options, paths.json_path, latencies_seconds=latencies)
     write_markdown_report(
         stats,
         paths.markdown_path,
@@ -267,3 +271,22 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
         prometheus_path=paths.prometheus_path,
         stats=stats,
     )
+
+
+def compare_runs_from_json(json_paths: list[Path], output_dir: Path) -> Path:
+    import json
+
+    run_latencies: list[list[float]] = []
+    run_labels: list[str] = []
+    for json_path in json_paths:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        latencies = payload.get("latencies_seconds")
+        if not isinstance(latencies, list):
+            raise ValueError(f"missing latencies_seconds in {json_path}")
+        run_latencies.append([float(value) for value in latencies])
+        run_labels.append(json_path.stem.replace("_summary", ""))
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "latency_run_comparison.png"
+    plot_latency_run_comparison(run_latencies, run_labels, output_path)
+    return output_path

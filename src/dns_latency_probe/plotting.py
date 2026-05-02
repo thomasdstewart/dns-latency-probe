@@ -146,3 +146,49 @@ def plot_latency_timeseries(
     _apply_layout()
     _save_with_fallback(output_path, "DNS Response Time Over Time")
     plt.close()
+
+
+def plot_latency_run_comparison(
+    run_latencies: list[list[float]],
+    run_labels: list[str],
+    output_path: Path,
+) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    clipped_runs = [_clip_latencies(latencies) for latencies in run_latencies]
+    figure, axis = plt.subplots(figsize=(16, 9))
+
+    for index, latencies in enumerate(clipped_runs, start=1):
+        if not latencies:
+            continue
+        axis.plot(
+            [index] * len(latencies),
+            latencies,
+            marker="o",
+            linestyle="none",
+            markersize=3,
+            alpha=0.45,
+        )
+
+    non_empty_runs = [latencies for latencies in clipped_runs if latencies]
+    if non_empty_runs:
+        positions = [
+            run_index
+            for run_index, run_latencies in enumerate(clipped_runs, start=1)
+            if run_latencies
+        ]
+        axis.boxplot(
+            non_empty_runs,
+            positions=positions,
+            widths=0.35,
+            showfliers=False,
+        )
+
+    axis.set_title("DNS Latency Comparison Across Runs")
+    axis.set_xlabel("Run")
+    axis.set_ylabel("Latency (seconds)")
+    axis.set_xticks(list(range(1, len(run_labels) + 1)))
+    axis.set_xticklabels(run_labels, rotation=20, ha="right")
+    _configure_log_latency_axis(axis)
+    _apply_layout()
+    figure.savefig(output_path)
+    plt.close(figure)

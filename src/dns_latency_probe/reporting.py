@@ -46,7 +46,10 @@ def _format_percent(value: float | None) -> str:
 
 
 def write_json_summary(
-    stats: LatencyStats, invocation_options: dict[str, object], output_path: Path
+    stats: LatencyStats,
+    invocation_options: dict[str, object],
+    output_path: Path,
+    latencies_seconds: list[float] | None = None,
 ) -> None:
     report = {
         "invocation_options": invocation_options,
@@ -71,6 +74,7 @@ def write_json_summary(
             "p99": _round_seconds(stats.p99_seconds),
             "pct_over_1s_percent": _round_percent(stats.pct_over_1s),
         },
+        "latencies_seconds": [_round_seconds(v) for v in (latencies_seconds or [])],
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")

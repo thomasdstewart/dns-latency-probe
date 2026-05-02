@@ -12,6 +12,7 @@ from dns_latency_probe.plotting import (
     LOG_MINOR_TICKS,
     _configure_log_latency_axis,
     plot_latency_histogram,
+    plot_latency_run_comparison,
     plot_latency_timeseries,
 )
 
@@ -240,3 +241,9 @@ def test_configure_log_latency_axis_adds_major_and_minor_ticks() -> None:
     assert list(minor_locator.tick_values(0.0, 1.0)) == LOG_MINOR_TICKS
 
     plt.close(figure)
+
+
+def test_plot_latency_run_comparison_creates_image(tmp_path: Path) -> None:
+    output_path = tmp_path / "comparison.png"
+    plot_latency_run_comparison([[0.01, 0.1], [0.02, 0.2, 2.0]], ["run-a", "run-b"], output_path)
+    assert output_path.exists()

@@ -41,6 +41,7 @@ def test_write_json_summary_rounds_float_values(tmp_path: Path) -> None:
     assert latency["max"] == 1.0
     assert latency["mean"] == 0.456789
     assert latency["pct_over_1s_percent"] == 12.346
+    assert report["latencies_seconds"] == []
 
 
 def test_write_markdown_report_formats_units_and_precision(tmp_path: Path) -> None:
@@ -62,3 +63,15 @@ def test_write_markdown_report_formats_units_and_precision(tmp_path: Path) -> No
     assert "- min: 0.123457 s" in markdown
     assert "- p99: 1.000000 s" in markdown
     assert "- > 1 s: 12.346%" in markdown
+
+
+def test_write_json_summary_includes_latencies(tmp_path: Path) -> None:
+    output_path = tmp_path / "summary.json"
+    write_json_summary(
+        _stats(),
+        {"resolver": "1.1.1.1"},
+        output_path,
+        latencies_seconds=[0.12345678, 1.23456789],
+    )
+    report = json.loads(output_path.read_text(encoding="utf-8"))
+    assert report["latencies_seconds"] == [0.123457, 1.234568]
