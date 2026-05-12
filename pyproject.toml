@@ -7,7 +7,7 @@ name = "dns-latency-probe"
 version = "0.1.0"
 description = "CLI tool to measure DNS response latency using Scapy"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "dns-latency-probe contributors" }]
 dependencies = [
@@ -36,11 +36,11 @@ where = ["src"]
 
 [tool.black]
 line-length = 100
-target-version = ["py314"]
+target-version = ["py313"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py314"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "SIM", "C4", "ARG", "RUF"]
@@ -50,7 +50,7 @@ ignore = ["ARG001"]
 "tests/**/*.py" = ["S101"]
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.13"
 strict = true
 warn_unused_configs = true
 warn_return_any = true
