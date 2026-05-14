@@ -1,2 +1,2 @@
 # Keep Black pinned for deterministic formatting in CI and local runs.
-black==25.12.0
+black==26.3.1
