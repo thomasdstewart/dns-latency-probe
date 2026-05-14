@@ -36,6 +36,8 @@ class TsharkDnsAnalysis:
     matched: list[MatchedPair]
     unmatched: list[QueryRecord]
     responses_without_tshark_latency: int
+    duplicate_response_candidates: int
+    stale_responses: int
     malformed_rows: int
 
 
@@ -121,20 +123,6 @@ def _response_from_row(row: dict[str, str]) -> ResponseRecord:
     )
 
 
-def _synthetic_query_from_response(response: ResponseRecord, latency_seconds: float) -> QueryRecord:
-    return QueryRecord(
-        sent_at=response.seen_at - latency_seconds,
-        txid=response.txid,
-        qname=response.qname,
-        qtype=response.qtype,
-        protocol=response.protocol,
-        src_ip=response.dst_ip,
-        src_port=response.dst_port,
-        dst_ip=response.src_ip,
-        dst_port=response.src_port,
-    )
-
-
 def _pop_matching_query(
     pending: dict[tuple[int, str, int, str, str | None, int, str, int], deque[QueryRecord]],
     key: tuple[int, str, int, str, str | None, int, str, int],
@@ -164,6 +152,8 @@ def parse_tshark_dns_csv(csv_text: str) -> TsharkDnsAnalysis:
     queries: list[QueryRecord] = []
     response_rows: list[tuple[ResponseRecord, float]] = []
     responses_without_tshark_latency = 0
+    duplicate_response_candidates = 0
+    stale_responses = 0
     malformed_rows = 0
 
     for row in reader:
@@ -186,15 +176,26 @@ def parse_tshark_dns_csv(csv_text: str) -> TsharkDnsAnalysis:
     )
     for captured_query in sorted(queries, key=lambda item: item.sent_at):
         pending[_query_key(captured_query)].append(captured_query)
+    matched_sent_at_by_key: dict[
+        tuple[int, str, int, str, str | None, int, str, int], list[float]
+    ] = defaultdict(list)
 
     matched: list[MatchedPair] = []
     for response, latency_seconds in sorted(response_rows, key=lambda item: item[0].seen_at):
         expected_sent_at = response.seen_at - latency_seconds
-        matched_query = _pop_matching_query(
-            pending, _response_to_query_key(response), expected_sent_at
-        )
+        key = _response_to_query_key(response)
+        matched_query = _pop_matching_query(pending, key, expected_sent_at)
         if matched_query is None:
-            matched_query = _synthetic_query_from_response(response, latency_seconds)
+            previous_sent_times = matched_sent_at_by_key.get(key, [])
+            if any(
+                abs(previous_sent_at - expected_sent_at) <= _QUERY_MATCH_EPSILON_SECONDS
+                for previous_sent_at in previous_sent_times
+            ):
+                duplicate_response_candidates += 1
+            else:
+                stale_responses += 1
+            continue
+        matched_sent_at_by_key[key].append(matched_query.sent_at)
         matched.append(
             MatchedPair(query=matched_query, response=response, latency_seconds=latency_seconds)
         )
@@ -205,6 +206,8 @@ def parse_tshark_dns_csv(csv_text: str) -> TsharkDnsAnalysis:
         matched=matched,
         unmatched=unmatched,
         responses_without_tshark_latency=responses_without_tshark_latency,
+        duplicate_response_candidates=duplicate_response_candidates,
+        stale_responses=stale_responses + responses_without_tshark_latency,
         malformed_rows=malformed_rows,
     )
 
@@ -250,6 +253,11 @@ def analyse_pcap_with_tshark(pcap_path: Path) -> TsharkDnsAnalysis:
     analysis = parse_tshark_dns_csv(completed.stdout)
     if analysis.malformed_rows:
         LOGGER.warning("Ignored %d malformed tshark CSV rows", analysis.malformed_rows)
+    if analysis.duplicate_response_candidates:
+        LOGGER.info(
+            "Ignored %d duplicate DNS response candidates",
+            analysis.duplicate_response_candidates,
+        )
     if analysis.responses_without_tshark_latency:
         LOGGER.info(
             "Ignored %d DNS responses without tshark dns.time values",

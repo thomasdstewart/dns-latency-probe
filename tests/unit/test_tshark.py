@@ -47,7 +47,7 @@ def test_parse_tshark_dns_csv_tracks_unmatched_queries_and_responses_without_lat
     assert analysis.matched == []
 
 
-def test_parse_tshark_dns_csv_synthesises_query_when_query_row_is_missing() -> None:
+def test_parse_tshark_dns_csv_counts_response_without_query_as_stale() -> None:
     csv_text = CSV_HEADER + (
         '"10.250000","11","1","example.com","1","8.8.8.8","192.0.2.10",'
         '"53","55000","","","0.250000"\n'
@@ -56,10 +56,25 @@ def test_parse_tshark_dns_csv_synthesises_query_when_query_row_is_missing() -> N
     analysis = parse_tshark_dns_csv(csv_text)
 
     assert len(analysis.queries) == 0
+    assert analysis.matched == []
+    assert analysis.stale_responses == 1
+
+
+def test_parse_tshark_dns_csv_drops_duplicate_responses() -> None:
+    csv_text = CSV_HEADER + (
+        '"10.000000","11","0","example.com","1","192.0.2.10","8.8.8.8",'
+        '"55000","53","","",""\n'
+        '"10.123456","11","1","example.com","1","8.8.8.8","192.0.2.10",'
+        '"53","55000","","","0.123456"\n'
+        '"10.223456","11","1","example.com","1","8.8.8.8","192.0.2.10",'
+        '"53","55000","","","0.223456"\n'
+    )
+
+    analysis = parse_tshark_dns_csv(csv_text)
+
     assert len(analysis.matched) == 1
-    assert analysis.matched[0].query.sent_at == pytest.approx(10.0)
-    assert analysis.matched[0].query.src_ip == "192.0.2.10"
-    assert analysis.matched[0].query.dst_ip == "8.8.8.8"
+    assert analysis.duplicate_response_candidates == 1
+    assert analysis.stale_responses == 0
 
 
 def test_analyse_pcap_with_tshark_runs_limited_csv_command(

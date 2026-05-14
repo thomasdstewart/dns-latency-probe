@@ -142,7 +142,7 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
     monkeypatch.setattr("dns_latency_probe.app.run_query_loop", fake_run_query_loop)
 
     def fake_analyse_pcap_with_tshark(_pcap_path: Path) -> TsharkDnsAnalysis:
-        return TsharkDnsAnalysis(tshark_queries, tshark_matched, [], 0, 0)
+        return TsharkDnsAnalysis(tshark_queries, tshark_matched, [], 0, 0, 0, 0)
 
     monkeypatch.setattr(
         "dns_latency_probe.app.analyse_pcap_with_tshark", fake_analyse_pcap_with_tshark

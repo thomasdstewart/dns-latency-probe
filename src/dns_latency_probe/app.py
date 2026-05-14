@@ -229,9 +229,9 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     matched = tshark_analysis.matched
     unmatched = tshark_analysis.unmatched
     late_count = sum(1 for entry in matched if entry.latency_seconds > 1.0)
-    duplicates = 0
+    duplicates = tshark_analysis.duplicate_response_candidates
     out_of_order = 0
-    stale = tshark_analysis.responses_without_tshark_latency
+    stale = tshark_analysis.stale_responses
     latencies = [entry.latency_seconds for entry in matched]
     stats = compute_latency_stats(
         latencies=latencies,
