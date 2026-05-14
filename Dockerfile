@@ -10,7 +10,8 @@ COPY src ./src
 COPY examples ./examples
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+    && printf 'wireshark-common wireshark-common/install-setuid boolean false\n' | debconf-set-selections \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         libpcap0.8 \
         tshark \
         python3.13 \
