@@ -6,13 +6,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from scapy.layers.dns import DNS, DNSQR
-from scapy.layers.inet import IP, TCP, UDP
 from scapy.packet import Packet
 from scapy.sendrecv import AsyncSniffer
 from scapy.utils import wrpcap
-
-from dns_latency_probe.models import QueryRecord, ResponseRecord
 
 LOGGER = logging.getLogger(__name__)
 
@@ -92,86 +88,3 @@ def stop_capture(session: CaptureSession, pcap_path: Path | None) -> list[Packet
     else:
         LOGGER.info("Captured %d packets (pcap writing disabled)", packet_count)
     return packets
-
-
-def _qname_from_question(question: DNSQR) -> str:
-    qname_raw = question.qname
-    qname = str(qname_raw.decode("utf-8", errors="ignore").rstrip(".").lower())
-    return qname
-
-
-def _first_dns_question(dns: DNS) -> DNSQR | None:
-    qd = dns.qd
-    if qd is None:
-        return None
-    if isinstance(qd, DNSQR):
-        return qd
-    try:
-        first = qd[0]
-    except (IndexError, TypeError):
-        return None
-    if isinstance(first, DNSQR):
-        return first
-    return None
-
-
-def extract_dns_records(packets: list[Packet]) -> tuple[list[QueryRecord], list[ResponseRecord]]:
-    queries: list[QueryRecord] = []
-    responses: list[ResponseRecord] = []
-
-    for packet in packets:
-        if DNS not in packet or IP not in packet:
-            continue
-        dns = packet[DNS]
-        question = _first_dns_question(dns)
-        if question is None:
-            continue
-
-        protocol: str
-        src_port: int
-        dst_port: int
-        if UDP in packet:
-            protocol = "udp"
-            src_port = int(packet[UDP].sport)
-            dst_port = int(packet[UDP].dport)
-        elif TCP in packet:
-            protocol = "tcp"
-            src_port = int(packet[TCP].sport)
-            dst_port = int(packet[TCP].dport)
-        else:
-            continue
-
-        qname = _qname_from_question(question)
-        qtype = int(question.qtype)
-        timestamp = float(getattr(packet, "time", 0.0))
-
-        if dns.qr == 0:
-            queries.append(
-                QueryRecord(
-                    sent_at=timestamp,
-                    txid=int(dns.id),
-                    qname=qname,
-                    qtype=qtype,
-                    protocol=protocol,
-                    src_ip=str(packet[IP].src),
-                    src_port=src_port,
-                    dst_ip=str(packet[IP].dst),
-                    dst_port=dst_port,
-                )
-            )
-        else:
-            responses.append(
-                ResponseRecord(
-                    seen_at=timestamp,
-                    txid=int(dns.id),
-                    qname=qname,
-                    qtype=qtype,
-                    protocol=protocol,
-                    src_ip=str(packet[IP].src),
-                    src_port=src_port,
-                    dst_ip=str(packet[IP].dst),
-                    dst_port=dst_port,
-                )
-            )
-
-    return queries, responses

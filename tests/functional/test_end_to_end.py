@@ -16,7 +16,8 @@ from scapy.utils import wrpcap
 
 from dns_latency_probe.app import run_probe
 from dns_latency_probe.config import ProbeConfig
-from dns_latency_probe.models import QueryRecord
+from dns_latency_probe.models import MatchedPair, QueryRecord, ResponseRecord
+from dns_latency_probe.tshark import TsharkDnsAnalysis
 
 
 @dataclass(slots=True)
@@ -72,6 +73,8 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
     domains_file.write_text("example.com\nexample.org\n", encoding="utf-8")
 
     capture_packets: list[Packet] = []
+    tshark_queries: list[QueryRecord] = []
+    tshark_matched: list[MatchedPair] = []
 
     def fake_start_capture(interface: str) -> FakeCaptureSession:
         assert interface == "lo"
@@ -122,17 +125,28 @@ def test_end_to_end_outputs_and_duration(tmp_path: Path, monkeypatch: pytest.Mon
                 response_packet.time = r_time
                 capture_packets.append(response_packet)
 
-            sent_queries.append(
-                QueryRecord(
-                    q_time, txid, domain, 1, "udp", "127.0.0.1", src_port, resolver, resolver_port
-                )
+            query = QueryRecord(
+                q_time, txid, domain, 1, "udp", "127.0.0.1", src_port, resolver, resolver_port
             )
+            response = ResponseRecord(
+                r_time, txid, domain, 1, "udp", resolver, resolver_port, "127.0.0.1", src_port
+            )
+            sent_queries.append(query)
+            tshark_queries.append(query)
+            tshark_matched.append(MatchedPair(query, response, r_time - q_time))
             i += 1
             time.sleep(1 / rate)
 
     monkeypatch.setattr("dns_latency_probe.app.start_capture", fake_start_capture)
     monkeypatch.setattr("dns_latency_probe.app.stop_capture", fake_stop_capture)
     monkeypatch.setattr("dns_latency_probe.app.run_query_loop", fake_run_query_loop)
+
+    def fake_analyse_pcap_with_tshark(_pcap_path: Path) -> TsharkDnsAnalysis:
+        return TsharkDnsAnalysis(tshark_queries, tshark_matched, [], 0, 0, 0, 0)
+
+    monkeypatch.setattr(
+        "dns_latency_probe.app.analyse_pcap_with_tshark", fake_analyse_pcap_with_tshark
+    )
 
     def fake_plot_latency_histogram(
         _latencies: list[float],

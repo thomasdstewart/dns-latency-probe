@@ -7,13 +7,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from scapy.packet import Packet
-
 from dns_latency_probe.analysis import LatencyStats, compute_latency_stats
-from dns_latency_probe.capture import extract_dns_records, start_capture, stop_capture
+from dns_latency_probe.capture import start_capture, stop_capture
 from dns_latency_probe.config import ProbeConfig, normalize_output_base_name
 from dns_latency_probe.domains import load_domains
-from dns_latency_probe.matching import match_dns_queries
 from dns_latency_probe.models import MatchedPair, QueryRecord
 from dns_latency_probe.plotting import (
     plot_latency_histogram,
@@ -23,6 +20,7 @@ from dns_latency_probe.plotting import (
 from dns_latency_probe.prometheus import write_prometheus_textfile
 from dns_latency_probe.query_worker import run_query_loop
 from dns_latency_probe.reporting import write_json_summary, write_markdown_report, write_pdf_report
+from dns_latency_probe.tshark import analyse_pcap_with_tshark
 
 LOGGER = logging.getLogger(__name__)
 
@@ -91,7 +89,7 @@ def _run_capture_phase(
     config: ProbeConfig,
     domains: list[str],
     pcap_path: Path | None,
-) -> tuple[list[Packet], list[QueryRecord]]:
+) -> list[QueryRecord]:
     sent_queries: list[QueryRecord] = []
     capture_session = start_capture(config.interface)
     stop_event = threading.Event()
@@ -111,7 +109,6 @@ def _run_capture_phase(
         name="dns-query-worker",
     )
 
-    packets = []
     worker_started = False
     try:
         LOGGER.info("Starting DNS query worker")
@@ -126,9 +123,9 @@ def _run_capture_phase(
         stop_event.set()
         if worker_started:
             worker.join(timeout=5)
-        packets = stop_capture(capture_session, pcap_path=pcap_path)
+        stop_capture(capture_session, pcap_path=pcap_path)
 
-    return packets, sent_queries
+    return sent_queries
 
 
 def _emit_reports(
@@ -221,17 +218,20 @@ def run_probe(config: ProbeConfig) -> RunArtifacts:
     )
 
     domains = load_domains(config.domains_file)
-    packets, sent_queries = _run_capture_phase(
+    sent_queries = _run_capture_phase(
         config=config,
         domains=domains,
-        pcap_path=paths.pcap_path if config.output_format == "reports" else None,
+        pcap_path=paths.pcap_path,
     )
 
-    capture_queries, capture_responses = extract_dns_records(packets)
-
-    matched, unmatched, late_count, duplicates, out_of_order, stale = match_dns_queries(
-        capture_queries, capture_responses
-    )
+    tshark_analysis = analyse_pcap_with_tshark(paths.pcap_path)
+    capture_queries = tshark_analysis.queries
+    matched = tshark_analysis.matched
+    unmatched = tshark_analysis.unmatched
+    late_count = sum(1 for entry in matched if entry.latency_seconds > 1.0)
+    duplicates = tshark_analysis.duplicate_response_candidates
+    out_of_order = 0
+    stale = tshark_analysis.stale_responses
     latencies = [entry.latency_seconds for entry in matched]
     stats = compute_latency_stats(
         latencies=latencies,

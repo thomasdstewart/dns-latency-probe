@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dns-latency-probe"
 version = "0.1.0"
-description = "CLI tool to measure DNS response latency using Scapy"
+description = "CLI tool to measure DNS response latency using Scapy and tshark"
 readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "GPL-3.0-or-later" }

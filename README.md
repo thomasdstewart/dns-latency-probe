@@ -6,7 +6,7 @@
 
 1. Sending DNS A queries at a configurable rate.
 2. Capturing DNS packets (UDP/TCP port 53).
-3. Matching requests/responses.
+3. Writing the capture to pcap and using `tshark` DNS response-time fields for analysis.
 4. Generating latency statistics and reports.
 
 ## Runtime model
@@ -15,6 +15,7 @@ This project is now **container-first** and documented for **Podman only**.
 
 - Python runtime target: **3.14**
 - Recommended execution path: build and run with Podman
+- Runtime packet analysis requires `tshark` (included in the container image)
 - No backwards-compatibility guidance for older Python versions
 
 ## Build image
@@ -73,7 +74,7 @@ Filenames include timestamp + resolver slug, and optionally `--output-base-name`
 
 ## Prometheus textfile mode
 
-Use `--output-format prometheus` to write only a `.prom` textfile collector artifact.
+Use `--output-format prometheus` to write the `.prom` textfile collector artifact. The probe still writes a pcap so `tshark` can calculate DNS response times.
 
 ```bash
 podman run --rm \

@@ -29,7 +29,7 @@ classDiagram
 
     class App {
       +run_probe(config) RunArtifacts
-      -_run_capture_phase(config, domains, pcap_path) tuple
+      -_run_capture_phase(config, domains, pcap_path) list~QueryRecord~
       -_emit_reports(config, paths, stats, capture_queries, latencies, matched, run_date) None
       -_emit_prometheus_metrics(config, paths, stats, run_started_at) None
     }
@@ -37,7 +37,6 @@ classDiagram
     class Capture {
       +start_capture(interface) CaptureSession
       +stop_capture(session, pcap_path) list~Packet~
-      +extract_dns_records(packets) tuple~QueryRecord,ResponseRecord~
     }
 
     class QueryWorker {
@@ -50,8 +49,9 @@ classDiagram
       +load_domains(domains_file) list~str~
     }
 
-    class Matcher {
-      +match_dns_queries(queries, responses) tuple
+    class TsharkAnalysis {
+      +analyse_pcap_with_tshark(pcap_path) TsharkDnsAnalysis
+      +parse_tshark_dns_csv(csv_text) TsharkDnsAnalysis
     }
 
     class Analysis {
@@ -128,18 +128,18 @@ classDiagram
 
     App --> ProbeConfig : validates
     App --> DomainLoader : load_domains()
-    App --> Capture : start/stop + extract records
+    App --> Capture : start/stop + write pcap
     App --> QueryWorker : background DNS sender
-    App --> Matcher : match_dns_queries()
+    App --> TsharkAnalysis : analyse_pcap_with_tshark()
     App --> Analysis : compute_latency_stats()
 
     App --> Reporting : reports mode
     App --> Plotting : reports mode
     App --> Prometheus : prometheus mode
 
-    Capture --> QueryRecord : produces
-    Capture --> ResponseRecord : produces
-    Matcher --> MatchedPair : produces
+    TsharkAnalysis --> QueryRecord : parses from CSV
+    TsharkAnalysis --> ResponseRecord : parses from CSV
+    TsharkAnalysis --> MatchedPair : produces from dns.time
     Analysis --> LatencyStats : produces
 ```
 
@@ -153,7 +153,7 @@ sequenceDiagram
     participant D as domains.load_domains
     participant Cap as capture module
     participant W as query_worker thread
-    participant M as matching module
+    participant T as tshark analysis
     participant S as analysis module
     participant R as reporting/plotting
     participant P as prometheus writer
@@ -168,12 +168,9 @@ sequenceDiagram
     W-->>A: append sent QueryRecord entries
 
     A->>A: wait for configured duration
-    A->>Cap: stop_capture(session, pcap?)
-    A->>Cap: extract_dns_records(packets)
-    Cap-->>A: queries + responses
-
-    A->>M: match_dns_queries(queries, responses)
-    M-->>A: matched/unmatched/diagnostic counts
+    A->>Cap: stop_capture(session, pcap)
+    A->>T: execute tshark limited CSV fields over pcap
+    T-->>A: matched/unmatched records using dns.time
     A->>S: compute_latency_stats(...)
     S-->>A: LatencyStats
 
